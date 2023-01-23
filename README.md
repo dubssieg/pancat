@@ -25,3 +25,11 @@ options:
   -g {rGFA,GFA1,GFA1.1,GFA1.2,GFA2}, --gfa_version {rGFA,GFA1,GFA1.1,GFA1.2,GFA2}
                         Tells the GFA input style
 ```
+
+### Example usage : 
+
+```bash
+python grapher.py toy_examples/pggb_graph.gfa toy_examples/pggb_view -n 3 -g GFA1
+
+python grapher.py toy_examples/cactus_graph.gfa toy_examples/cactus_view -n 3 -g GFA1.1
+```
