@@ -75,6 +75,7 @@ class Record():
             if gfa_style == GfaStyle.RGFA:
                 raise ValueError(
                     f"Incompatible version format, C-lines vere added in GFA1 and were absent from {gfa_style}.")
+            raise NotImplementedError
 
     class Path():
         """
@@ -159,11 +160,3 @@ class Record():
             self.line = self.Jump(datas, self.gfastyle)
         else:
             raise ValueError('Unknown line for GFA standard')
-
-    def w_to_p_line(self) -> None:
-        if not isinstance(self.line, self.Walk):
-            raise ValueError(
-                f'Bad call of method on {type(self.line)} input type')
-        datas = ['P', self.line.name, ','.join(self.line.walk)]
-        self.linetype: LineType = LineType(datas[0])
-        self.line = self.Path(datas, self.gfastyle)

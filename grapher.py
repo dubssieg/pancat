@@ -29,7 +29,7 @@ def html_graph(graph: MultiDiGraph, job_name: str) -> None:
     with open(f"{job_name}_graph.html", "r", encoding="utf-8") as html_reader:
         outfile = html_reader.readlines()
         # <img src='{gfa_file.split('.')[0].split('/')[-1]}_cbar.png' align='center' rotate='90'>
-    outfile[10] = f"<h1>Graph for <b>{job_name}</b><img src='{job_name}_legend.png' align='center'></h1>"
+    outfile[10] = f"<h1>Graph for <b>{job_name}</b></h1>"
     with open(f"{job_name}_graph.html", "w", encoding="utf-8") as html_writer:
         html_writer.writelines(outfile)
 
@@ -67,6 +67,7 @@ def init_graph(gfa_file: str, gfa_version: str, n_aligns: int) -> MultiDiGraph:
                     )
                 case LineType.WALK, _:
                     if not gfa_line.line.idf == '_MINIGRAPH_':
+                        print(gfa_line.line.walk)
                         add_path(
                             graph,
                             [node for (node, _) in gfa_line.line.walk],
