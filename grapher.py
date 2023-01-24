@@ -67,10 +67,9 @@ def init_graph(gfa_file: str, gfa_version: str, n_aligns: int) -> MultiDiGraph:
                     )
                 case LineType.WALK, _:
                     if not gfa_line.line.idf == '_MINIGRAPH_':
-                        print(gfa_line.line.walk)
                         add_path(
                             graph,
-                            [node for (node, _) in gfa_line.line.walk],
+                            [node for (node, _) in gfa_line.line.path],
                             title=gfa_line.line.name,
                             color=cmap[visited_paths]
                         )
