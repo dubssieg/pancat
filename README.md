@@ -1,5 +1,5 @@
 # pangraphs
-Does pangenome graphs (sort of)
+Does pangenome graphs visualisation (sort of)
 
 ## Installation
 
