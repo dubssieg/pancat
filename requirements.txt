@@ -1,3 +1,4 @@
 pyvis
 networkx
 mycolorpy
+Bio
