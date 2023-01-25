@@ -4,18 +4,18 @@ from typing import Generator
 from gfatypes import LineType, Record, GfaStyle
 
 
-def grab_paths(gfa_file: str, gfa_version) -> list[Record]:
-    """_summary_
+def grab_paths(gfa_file: str, gfa_version: str) -> list[Record]:
+    """From a given gfa-like file, grabs the path of each haplotype
 
     Args:
-        gfa_file (str): _description_
-        gfa_version (_type_): _description_
+        gfa_file (str): a path to a gfa-like file
+        gfa_version (str): a GFA-format identifier
 
     Raises:
-        NotImplementedError: _description_
+        NotImplementedError: in case of rGFA which is currently not supportef
 
     Returns:
-        list[Record]: _description_
+        list[Record]: list of paths, one for each haplotype
     """
     paths: list[Record] = []
     version: GfaStyle = GfaStyle(gfa_version)
@@ -44,15 +44,15 @@ def node_range(
     edits the list of records to keep only nodes in subpath
 
     Args:
-        paths_to_follow (list[Record]): _description_
-        node_start (str): _description_
-        node_end (str): _description_
+        paths_to_follow (list[Record]): a list of paths
+        node_start (str): optional, defaults to none ; node we cut graph from
+        node_end (str): optional, defaults to none ; node we cut graph to
 
     Raises:
-        ValueError: _description_
+        ValueError: If taget nodes aren't in the backbone of the graph
 
     Returns:
-        list[Record]: _description_
+        list[Record]: the subpaths within the nodes
     """
     if node_start is None and node_end is None:
         return paths_to_follow
@@ -84,11 +84,11 @@ def get_node_position(path_seq: list, path_query: list) -> int:
     """Gets the first overlap of two lists
 
     Args:
-        path_seq (list): _description_
-        path_query (list): _description_
+        path_seq (list): a list of nodes
+        path_query (list): another one
 
     Returns:
-        int: _description_
+        int: position on query of the first overlap with ref
     """
     for node in path_seq:
         try:
@@ -99,15 +99,15 @@ def get_node_position(path_seq: list, path_query: list) -> int:
 
 
 def reconstruct(gfa_file: str, gfa_version: str, paths_to_follow: list[Record]) -> Generator:
-    """_summary_
+    """Given a list of paths and a file, recreates sequence of the current path and yields it
 
     Args:
-        gfa_file (str): _description_
-        gfa_version (str): _description_
-        paths_to_follow (list[Record]): _description_
+        gfa_file (str): a file to parse
+        gfa_version (str): GFA subversion of the parse
+        paths_to_follow (list[Record]): paths for the haplotypes inside the graph
 
     Yields:
-        Generator: _description_
+        Generator: a list of ordered subsequences that are the DNA sequences the path goes through
     """
     for path in paths_to_follow:
         path_seq: list = [seq for seq, _ in path.line.path]  # type:ignore
