@@ -43,7 +43,9 @@ def get_lengths(input_file: str) -> dict:
         dict: mapping id:sequence
     """
     return {
-        fasta.id: len(fasta.seq) for fasta in SeqIO.parse(open(input_file, encoding="utf-8"), 'fasta')
+        fasta.id: len(fasta.seq) for fasta in SeqIO.parse(
+            open(input_file, encoding="utf-8"), 'fasta'
+        )
     }
 
 
@@ -81,8 +83,7 @@ def exact_mapper(gfa_file: str, fasta_file: str, threshold: int = 10) -> dict:
         name:
         {
             id: [
-                # f'(?={node})'
-                (m.start(), len(node)) for m in finditer(node, str(fasta))
+                (m.start(), len(node)) for m in finditer(f'(?={node})', str(fasta))
             ]
             for id, fasta in get_fastas(fasta_file).items() if node in fasta
         }
@@ -90,19 +91,19 @@ def exact_mapper(gfa_file: str, fasta_file: str, threshold: int = 10) -> dict:
     }
 
 
-def show_alignments(map: dict, sequences: dict, nodes_to_highlight: list = []) -> None:
-    """_summary_
+def show_alignments(smap: dict, sequences: dict, nodes_to_highlight: list = []) -> None:
+    """Displays the alignments of nodes on all sequences of the graph
 
     Args:
-        map (dict): _description_
-        sequences (dict): _description_
+        smap (dict): mapping node-to-sequence positions
+        sequences (dict): names:len(seq) for each sequence
     """
 
-    fig, axs = plt.subplots(nrows=len(sequences), ncols=1, figsize=(
+    _, axs = plt.subplots(nrows=len(sequences), ncols=1, figsize=(
         14, 10), sharex=True, sharey=False)
 
-    all_sequences: list = list(set(chain(*map.values())))
-    all_nodes: list = list(map.keys())
+    all_sequences: list = list(set(chain(*smap.values())))
+    all_nodes: list = list(smap.keys())
 
     for seq_number, seq_name in enumerate(all_sequences):
         axs[seq_number].set_title(f"Alignment for {seq_name}")
@@ -110,7 +111,7 @@ def show_alignments(map: dict, sequences: dict, nodes_to_highlight: list = []) -
         axs[seq_number].set_ylim(-0.5, len(all_nodes)+1)
         axs[seq_number].plot([0, sequences[seq_name]], [
                              0, 0], linewidth=6, color='coral')
-        for i, (name, mapping) in enumerate(map.items()):
+        for i, (name, mapping) in enumerate(smap.items()):
             for seq_id, positions in mapping.items():
                 if seq_id == seq_name:
                     datas = [x for x, _ in positions]  # positions
@@ -131,16 +132,16 @@ def show_alignments(map: dict, sequences: dict, nodes_to_highlight: list = []) -
     plt.show()
 
 
-def dotgrid_plot(map: dict, nodes_to_highlight: list = []) -> None:
+def dotgrid_plot(smap: dict, nodes_to_highlight: list = []) -> None:
     """Displays the alignments as a grid of dots
 
     Args:
-        map (dict): mapping node-to-sequence
+        smap (dict): mapping node-to-sequence
         nodes_to_highlight (list, optional): a list of nodes to display in orange. Defaults to [].
     """
 
-    all_sequences: list = list(set(chain(*map.values())))
-    all_nodes: list = list(map.keys())
+    all_sequences: list = list(set(chain(*smap.values())))
+    all_nodes: list = list(smap.keys())
 
     plt.xticks([i for i in range(len(all_sequences))], labels=all_sequences)
     plt.xlabel("Origin sequences")
@@ -149,7 +150,7 @@ def dotgrid_plot(map: dict, nodes_to_highlight: list = []) -> None:
 
     for i, node in enumerate(all_nodes):
         for j, seq in enumerate(all_sequences):
-            if seq in map[node]:
+            if seq in smap[node]:
                 if node in nodes_to_highlight:
                     plt.scatter(x=j, y=i, c='darkorange')
                 else:
