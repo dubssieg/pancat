@@ -14,3 +14,7 @@ from .reconstruct_sequences import get_node_position
 from .reconstruct_sequences import reconstruct
 from .seq_length import get_assemblies_size
 from .seq_length import compare_fasta_sequences
+from .nodes_compare import are_nodes_matching
+from .nodes_compare import show_identity
+from .nodes_compare import init_simple_graph
+from .nodes_compare import display_graph
