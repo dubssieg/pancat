@@ -18,3 +18,6 @@ from .nodes_compare import are_nodes_matching
 from .nodes_compare import show_identity
 from .nodes_compare import init_simple_graph
 from .nodes_compare import display_graph
+from .gfa_convert import rgfa_to_gfa
+from .gfa_convert import create_p_lines
+from .gfa_convert import iterate_edges

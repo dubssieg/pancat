@@ -2,9 +2,10 @@
 from itertools import combinations
 from argparse import ArgumentParser, SUPPRESS
 from re import sub
-from networkx import MultiDiGraph, compose_all
-from gfatypes import LineType, Record
+from networkx import MultiDiGraph, compose_all, add_path, isolates
+from gfatypes import LineType, Record, GfaStyle
 from pyvis.network import Network
+import matplotlib.pyplot as plt
 
 
 def are_nodes_matching(gfa_files: list) -> list:
@@ -51,8 +52,12 @@ def show_identity(gfa_files: list, gfa_versions: list, colors: list) -> MultiDiG
     """
     if any(len(x) != len(y) for (x, y) in combinations(locals().values(), 2)):
         raise ValueError("Some arguments does not have the same length.")
-    combined_view: MultiDiGraph = compose_all(
-        [init_simple_graph(gfa, gfa_versions[i], colors[i]) for i, gfa in enumerate(gfa_files)])
+    if 'rGFA' in gfa_versions:
+        combined_view: MultiDiGraph = compose_all(
+            [init_simple_graph(gfa, gfa_versions[i], colors[i]) for i, gfa in enumerate(gfa_files)])
+    else:
+        combined_view: MultiDiGraph = compose_all(
+            [init_graph(gfa, gfa_versions[i], colors[i]) for i, gfa in enumerate(gfa_files)])
     identities: list = are_nodes_matching(gfa_files)
     for idies in identities:
         for (left, right) in combinations(idies, 2):
@@ -95,6 +100,80 @@ def init_simple_graph(gfa_file: str, gfa_version: str, color: str) -> MultiDiGra
                         color=color,
                         weight=4
                     )
+    return graph
+
+
+def get_palette(number_of_colors: int) -> list:
+    """Returns a number_of_colors-sized palette, as a list,
+    that one can access with colors[i].
+
+    Args:
+        number_of_colors (int): number of colors needed
+
+    Returns:
+        list: palette of colors
+    """
+    colormap = plt.cm.viridis  # type:ignore
+    number_of_colors = min(colormap.N, number_of_colors)
+    return [colormap(int(x*colormap.N/number_of_colors)) for x in range(number_of_colors)]
+
+
+def init_graph(gfa_file: str, gfa_version: str, color: str, n_aligns: int = 3) -> MultiDiGraph:
+    """Initializes the graph without displaying it
+
+    Args:
+        gfa_file (str): GFA-like input file
+        gfa_version (str): user-assumed GFA subversion
+        n_aligns (int): number of distinct origin sequences
+
+    Raises:
+        ValueError: Occurs if graph specified format isn't correct given the file
+        NitImplementedError : Occurs if the function is currently not impelemented yet
+
+    Returns:
+        MultiDiGraph: a graph representing the given pangenome
+    """
+    graph = MultiDiGraph()
+
+    cmap: list = ['slateblue', 'darkslateblue', 'mediumslateblue']
+
+    visited_paths: int = 0
+    version: GfaStyle = GfaStyle(gfa_version)
+    if version == GfaStyle.RGFA:
+        raise ValueError(
+            "This function is not rGFA compatible. Please convert first.")
+    with open(gfa_file, "r", encoding="utf-8") as reader:
+        for line in reader:
+            gfa_line: Record = Record(line, gfa_version)
+            match gfa_line.linetype:
+                case LineType.SEGMENT:
+                    graph.add_node(
+                        f"{gfa_file.split('/')[-1].split('.')[0]}_{gfa_line.line.name}",
+                        title=f"{gfa_line.line.length} bp.",
+                        color=color
+                    )
+                case LineType.WALK:
+                    if not gfa_line.line.idf == '_MINIGRAPH_':
+                        add_path(
+                            graph,
+                            [f"{gfa_file.split('/')[-1].split('.')[0]}_{node}" for (
+                                node, _) in gfa_line.line.path],
+                            title=gfa_line.line.name,
+                            color=cmap[visited_paths],
+                            weight=4
+                        )
+                        visited_paths += 1
+                case LineType.PATH:
+                    add_path(
+                        graph,
+                        [f"{gfa_file.split('/')[-1].split('.')[0]}_{node}" for (
+                            node, _) in gfa_line.line.path],
+                        title=gfa_line.line.name,
+                        color=cmap[visited_paths],
+                        weight=4
+                    )
+                    visited_paths += 1
+    graph.remove_nodes_from(list(isolates(graph)))
     return graph
 
 
