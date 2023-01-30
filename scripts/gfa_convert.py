@@ -1,7 +1,6 @@
 "Converts various GFA files"
 from argparse import ArgumentParser, SUPPRESS
 from re import sub
-from itertools import chain
 
 
 def rgfa_to_gfa(input_file: str, output_file: str, p_lines: bool = False, keep_tags: bool = False) -> None:
