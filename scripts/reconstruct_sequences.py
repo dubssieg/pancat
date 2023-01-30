@@ -129,7 +129,8 @@ if __name__ == '__main__':
 
     parser = ArgumentParser(add_help=False)
     parser.add_argument("file", type=str, help="Path to a gfa-like file")
-    parser.add_argument("out", type=str, help="Output path (with extension)")
+    parser.add_argument(
+        "out", type=str, help="Output path (without extension)")
     parser.add_argument('-h', '--help', action='help', default=SUPPRESS,
                         help='Reconstruct linear sequences from a GFA graph')
     parser.add_argument(
@@ -151,12 +152,20 @@ if __name__ == '__main__':
         help='To specifiy a ending node on reference to create a subgraph',
         default=None
     )
+    parser.add_argument(
+        "-s", "--split", help="Tells to split in different files", action='store_true')
     args = parser.parse_args()
 
     followed_paths: list = node_range(grab_paths(
         args.file, args.gfa_version), args.start, args.stop)
 
-    with open(args.out, "w", encoding="utf-8") as writer:
+    if args.split:
         for i, sequence in enumerate(reconstruct(args.file, args.gfa_version, followed_paths)):
-            writer.write(
-                f"> {followed_paths[i].line.name}\n{''.join(sequence)}\n")  # type:ignore
+            with open(f"{args.out}_{i}.fasta", "w", encoding="utf-8") as writer:
+                writer.write(
+                    f"> {followed_paths[i].line.name}\n{''.join(sequence)}\n")  # type:ignore
+    else:
+        with open(f"{args.out}.fasta", "w", encoding="utf-8") as writer:
+            for i, sequence in enumerate(reconstruct(args.file, args.gfa_version, followed_paths)):
+                writer.write(
+                    f"> {followed_paths[i].line.name}\n{''.join(sequence)}\n")  # type:ignore

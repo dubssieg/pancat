@@ -135,9 +135,9 @@ def init_graph(gfa_file: str, gfa_version: str, color: str, n_aligns: int = 3) -
     """
     graph = MultiDiGraph()
 
-    cmap: list = ['slateblue', 'darkslateblue', 'mediumslateblue']
+    cmap: dict = {'SeqBt1': 'darkred',
+                  'BtChar.1': 'indianred', 'BtChar.2': 'coral'}
 
-    visited_paths: int = 0
     version: GfaStyle = GfaStyle(gfa_version)
     if version == GfaStyle.RGFA:
         raise ValueError(
@@ -159,20 +159,18 @@ def init_graph(gfa_file: str, gfa_version: str, color: str, n_aligns: int = 3) -
                             [f"{gfa_file.split('/')[-1].split('.')[0]}_{node}" for (
                                 node, _) in gfa_line.line.path],
                             title=gfa_line.line.name,
-                            color=cmap[visited_paths],
+                            color=cmap[gfa_line.line.name],
                             weight=4
                         )
-                        visited_paths += 1
                 case LineType.PATH:
                     add_path(
                         graph,
                         [f"{gfa_file.split('/')[-1].split('.')[0]}_{node}" for (
                             node, _) in gfa_line.line.path],
                         title=gfa_line.line.name,
-                        color=cmap[visited_paths],
+                        color=cmap[gfa_line.line.name],
                         weight=4
                     )
-                    visited_paths += 1
     graph.remove_nodes_from(list(isolates(graph)))
     return graph
 

@@ -1,6 +1,7 @@
 "Converts various GFA files"
 from argparse import ArgumentParser, SUPPRESS
 from re import sub
+from itertools import chain
 
 
 def rgfa_to_gfa(input_file: str, output_file: str, p_lines: bool = False, keep_tags: bool = False) -> None:
@@ -66,30 +67,27 @@ def create_p_lines(edges: list[tuple]) -> dict:
     Args:
         edges (list[tuple]): edge description
     """
-    # Edges in reference are shared.
-    bank_of_edges: list[tuple] = [(start, middle, stop, seq)
-                                  for (start, middle, stop, seq) in edges if seq == 0]
-
+    # Init a bank of edges
+    bank_of_edges: dict = {int(x): []
+                           for x in set([e for _, _, _, e in edges])}
     # We iterate until convergence, which happens when no sequence could be merged
-    while True:
+    while edges:
         match iterate_edges(edges, bank_of_edges):
             case None:
                 # We need to complete paths that are not part of the reference with the end and start of the reference sequence
                 paths: dict = {str(seq): [start]+mid+[end]
-                               for (start, mid, end, seq) in edges}
+                               for (start, mid, end, seq) in bank_of_edges.values()}
                 refseq: list = paths['0']
                 for id, path in paths.items():
                     if id != '0':
                         paths[id] = refseq[0:refseq.index(
                             paths[id][0])] + path + refseq[refseq.index(paths[id][-1])+1:]
                 return paths
-            case (new_edge, pos_to_edit, pos_to_suppress):
-                edges[pos_to_edit] = new_edge
-                if not pos_to_suppress > len(edges):
-                    edges.pop(pos_to_suppress)
+            case (new_edge, pos_to_edit):
+                bank_of_edges[pos_to_edit] = new_edge
 
 
-def iterate_edges(edges: list[tuple], bank_of_edges: list[tuple]) -> tuple | None:
+def iterate_edges(edges: list[tuple], bank_of_edges: dict[int, list]) -> tuple | None:
     """Iterates over the edges and chains them
 
     Args:
@@ -99,19 +97,29 @@ def iterate_edges(edges: list[tuple], bank_of_edges: list[tuple]) -> tuple | Non
     Returns:
         tuple: (new_edge,position_to_edit,position_to_del)
     """
-    for i, edge_a in enumerate(edges):
-        for j, edge_b in enumerate(edges + bank_of_edges):
-            if edge_a != edge_b:
-                match (edge_a, edge_b):
-                    case ((start, internal_left, bridge_a, seq_a), (bridge_b, internal_right, end, seq_b)) | ((bridge_a, internal_right, end, seq_a), (start, internal_left, bridge_b, seq_b)) if seq_a == seq_b and bridge_a == bridge_b:
-                        # Same seq and chained, or same seq and chained and reversed
-                        return (start, internal_left + [bridge_a] + internal_right, end, seq_a), i, j
-                    case ((start, internal_left, bridge_a, 0), (bridge_b, internal_right, end, seq)) | ((start, internal_left, bridge_a, seq), (bridge_b, internal_right, end, 0)) | ((bridge_a, internal_right, end, 0), (start, internal_left, bridge_b, seq)) | ((bridge_a, internal_right, end, seq), (start, internal_left, bridge_b, 0)) if bridge_a == bridge_b:
-                        # Different seq but chained to ref, or different seq but chained to ref and reversed
-                        return (start, internal_left + [bridge_a] + internal_right, end, seq), i, j
-                    case _:
-                        # No edge can be merge
-                        pass
+    for edge_a in edges:
+        for identifier, edge_b in bank_of_edges.items():
+            match (edge_a, edge_b):
+                case ((_, _, _, origin), []) if origin == identifier:
+                    # Empty sequence
+                    return edge_a, identifier
+                case ((start, internal_left, bridge_a, seq_a), (bridge_b, internal_right, end, seq_b)) if seq_a == seq_b and bridge_a == bridge_b:
+                    # Same seq and chained
+                    return (start, internal_left + [bridge_a] + internal_right, end, seq_a), seq_a
+                case ((bridge_a, internal_right, end, seq_a), (start, internal_left, bridge_b, seq_b)) if seq_a == seq_b and bridge_a == bridge_b:
+                    # same seq and chained and reversed
+                    return (start, internal_left + [bridge_a] + internal_right, end, seq_a), seq_a
+                case ((start, internal_left, bridge_a, 0), (bridge_b, internal_right, end, seq)) if bridge_a == bridge_b:
+                    return (start, internal_left + [bridge_a] + internal_right, end, seq), seq
+                case ((start, internal_left, bridge_a, seq), (bridge_b, internal_right, end, 0)) if bridge_a == bridge_b:
+                    return (start, internal_left + [bridge_a] + internal_right, end, seq), seq
+                case ((bridge_a, internal_right, end, 0), (start, internal_left, bridge_b, seq)) if bridge_a == bridge_b:
+                    return (start, internal_left + [bridge_a] + internal_right, end, seq), seq
+                case ((bridge_a, internal_right, end, seq), (start, internal_left, bridge_b, 0)) if bridge_a == bridge_b:
+                    # Different seq but chained to ref, or different seq but chained to ref and reversed
+                    return (start, internal_left + [bridge_a] + internal_right, end, seq), seq
+                case _:
+                    pass
 
 
 if __name__ == "__main__":
