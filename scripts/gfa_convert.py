@@ -91,7 +91,7 @@ def iterate_edges(edges: list[tuple], bank_of_edges: dict[int, list]) -> tuple |
 
     Args:
         edges (list[tuple]): a list of all edges inside the graph
-        bank_of_edges (list[tuple]): a list of all edges from the reference inside the graph
+        bank_of_edges (list[tuple]): a list of all newformed edges
 
     Returns:
         tuple: (new_edge,position_to_edit,position_to_del)
@@ -102,20 +102,23 @@ def iterate_edges(edges: list[tuple], bank_of_edges: dict[int, list]) -> tuple |
                 case ((_, _, _, origin), []) if origin == identifier:
                     # Empty sequence
                     return edge_a, identifier
-                case ((start, internal_left, bridge_a, seq_a), (bridge_b, internal_right, end, seq_b)) if seq_a == seq_b and bridge_a == bridge_b:
+                case ((start, internal_left, bridge_a, seq_a), (bridge_b, internal_right, end, seq_b)) if seq_a == seq_b and bridge_a == bridge_b and end not in [start]+internal_left:
                     # Same seq and chained
                     return (start, internal_left + [bridge_a] + internal_right, end, seq_a), seq_a
-                case ((bridge_a, internal_right, end, seq_a), (start, internal_left, bridge_b, seq_b)) if seq_a == seq_b and bridge_a == bridge_b:
+                case ((bridge_a, internal_right, end, seq_a), (start, internal_left, bridge_b, seq_b)) if seq_a == seq_b and bridge_a == bridge_b and end not in [start]+internal_left:
                     # same seq and chained and reversed
                     return (start, internal_left + [bridge_a] + internal_right, end, seq_a), seq_a
-                case ((start, internal_left, bridge_a, 0), (bridge_b, internal_right, end, seq)) if bridge_a == bridge_b:
+                case ((start, internal_left, bridge_a, 0), (bridge_b, internal_right, end, seq)) if bridge_a == bridge_b and end not in [start]+internal_left:
+                    # Different seq but chained to ref
                     return (start, internal_left + [bridge_a] + internal_right, end, seq), seq
-                case ((start, internal_left, bridge_a, seq), (bridge_b, internal_right, end, 0)) if bridge_a == bridge_b:
+                case ((start, internal_left, bridge_a, seq), (bridge_b, internal_right, end, 0)) if bridge_a == bridge_b and end not in [start]+internal_left:
+                    # Different seq but chained to ref
                     return (start, internal_left + [bridge_a] + internal_right, end, seq), seq
-                case ((bridge_a, internal_right, end, 0), (start, internal_left, bridge_b, seq)) if bridge_a == bridge_b:
+                case ((bridge_a, internal_right, end, 0), (start, internal_left, bridge_b, seq)) if bridge_a == bridge_b and end not in [start]+internal_left:
+                    # Different seq but chained to ref and reversed
                     return (start, internal_left + [bridge_a] + internal_right, end, seq), seq
-                case ((bridge_a, internal_right, end, seq), (start, internal_left, bridge_b, 0)) if bridge_a == bridge_b:
-                    # Different seq but chained to ref, or different seq but chained to ref and reversed
+                case ((bridge_a, internal_right, end, seq), (start, internal_left, bridge_b, 0)) if bridge_a == bridge_b and end not in [start]+internal_left:
+                    # Different seq but chained to ref and reversed
                     return (start, internal_left + [bridge_a] + internal_right, end, seq), seq
                 case _:
                     pass
