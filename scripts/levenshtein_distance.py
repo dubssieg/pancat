@@ -1,36 +1,13 @@
 'Compares nodes within a graph'
 from datetime import datetime
-from contextlib import redirect_stdout
 from itertools import combinations, chain
 from argparse import ArgumentParser, SUPPRESS
 from collections.abc import Iterable
 from networkx import MultiDiGraph, compose_all, add_path, isolates
 from gfatypes import LineType, Record, GfaStyle
 from pyvis.network import Network
+from Levenshtein import distance
 import matplotlib.pyplot as plt
-from Bio import Align
-
-
-def node_aligner(node: str, nodes_to_align: list) -> list[float]:
-    """Given a node and a list of nodes, compules all pairwise alignments and return their scores
-
-    Args:
-        node (str): node to compare sequences to
-        nodes_to_align (list): all nodes to align
-
-    Returns:
-        list[float]: a list of scores
-    """
-    aligner = Align.PairwiseAligner()
-    aligner.open_gap_score = -0.5
-    aligner.extend_gap_score = -0.1
-    aligner.target_end_gap_score = 0.0
-    aligner.query_end_gap_score = 0.0
-
-    scores: list[float] = [aligner.align(
-        node, query)[0].score for query in nodes_to_align]  # type:ignore
-    max_score: float = max(scores)
-    return [s/max_score for s in scores]
 
 
 def show_identity(gfa_files: list, gfa_versions: list, colors: list, target_score: float | None = None) -> MultiDiGraph:
@@ -42,12 +19,6 @@ def show_identity(gfa_files: list, gfa_versions: list, colors: list, target_scor
         gfa_versions (list): user-assumed GFA subversions
         colors (list): one color per pangenome graph
     """
-    if target_score is not None:
-        aligner = Align.PairwiseAligner()
-        aligner.open_gap_score = -0.5
-        aligner.extend_gap_score = -0.1
-        aligner.target_end_gap_score = 0.0
-        aligner.query_end_gap_score = 0.0
     if any(len(x) != len(y) for (x, y) in  # type:ignore
            combinations([x for x in locals().values() if isinstance(x, Iterable)], 2)):  # type:ignore
         raise ValueError("Some arguments does not have the same length.")
@@ -74,10 +45,8 @@ def show_identity(gfa_files: list, gfa_versions: list, colors: list, target_scor
                 elif len(node_data['seq']) > len(data_other['seq'])*2 or len(node_data['seq'])*2 < len(data_other['seq']):
                     continue
                 elif target_score is not None:
-                    score: float = (aligner.align(node_data['seq'],  # type:ignore
-                                                  data_other['seq'])[
-                                    0].score)/max(len(node_data['seq']),  # type:ignore
-                                                  len(data_other['seq']))
+                    score: float = 1-(distance(node_data['seq'], data_other['seq']))/max(
+                        len(node_data['seq']), len(data_other['seq']))
                     if score >= target_score:
                         combined_view.add_edge(
                             name_node, other_name, color='forestgreen', arrows='', alpha=score, title=str(score))
@@ -168,9 +137,8 @@ def init_graph(gfa_file: str, gfa_version: str, color: str) -> MultiDiGraph:
             match gfa_line.linetype:
                 case LineType.SEGMENT:
                     graph.add_node(
-                        f"""{gfa_file.split('/')[-1].split('.')[0]}_
-                        {gfa_line.line.name}""",  # type:ignore
-                        title=f"{gfa_line.line.length} bp.",  # type:ignore
+                        f"{gfa_file.split('/')[-1].split('.')[0]}_{gfa_line.line.name}",
+                        title=f"{gfa_line.line.length} bp.",
                         seq=line.split()[2],
                         color=color
                     )
@@ -224,15 +192,13 @@ if __name__ == '__main__':
                         help='Evaluates identity of nodes within and across graphs')
     parser.add_argument(
         "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
-    parser.add_argument("--score", help="Filters by percentage of identity",
+    parser.add_argument("-s", "--score", help="Filters by percentage of identity",
                         required=False, type=float, default=None)
     args = parser.parse_args()
 
-    with open('out.log', 'w', encoding='utf-8') as f:
-        with redirect_stdout(f):
-            print(
-                f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Started nodes_align.py")
-            display_graph(show_identity(args.file, args.gfa_version,
-                                        ['rebeccapurple', 'crimson', 'orchid'][:len(args.file)], args.score))
-            print(
-                f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Script ended sucessfully!")
+    print(
+        f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Started nodes_align.py")
+    display_graph(show_identity(args.file, args.gfa_version,
+                                ['rebeccapurple', 'crimson', 'orchid'][:len(args.file)], args.score))
+    print(
+        f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Script ended sucessfully!")
