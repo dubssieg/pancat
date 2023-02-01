@@ -6,6 +6,7 @@ from gfatypes import LineType, Record, GfaStyle
 from pyvis.network import Network
 import matplotlib.pyplot as plt
 from Bio import Align
+from datetime import datetime
 
 
 def node_aligner(node: str, nodes_to_align: list) -> list[float]:
@@ -50,11 +51,15 @@ def show_identity(gfa_files: list, gfa_versions: list, colors: list) -> MultiDiG
     combined_view: MultiDiGraph = compose_all(graphs)
     graphs: list = [list(graph.nodes(data=True)) for graph in graphs]
     for idx, connex_component in enumerate(graphs):
+        print(
+            f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Started working on connex component #{idx}")
         all_other_nodes: list = list(
             chain.from_iterable(graphs[:idx] + graphs[idx+1:]))
         nodes_names: list = [n for n, _ in all_other_nodes]
         all_other_nodes = [data['seq'] for _, data in all_other_nodes]
         for node in connex_component:
+            print(
+                f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Aligning {node[0]} to graph...")
             scores: list = node_aligner(node[1]['seq'], all_other_nodes)
             for i, score in enumerate(scores):
                 combined_view.add_edge(
@@ -130,6 +135,7 @@ def init_graph(gfa_file: str, gfa_version: str, color: str, n_aligns: int = 3) -
     Returns:
         MultiDiGraph: a graph representing the given pangenome
     """
+    print(f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Initializing graph for {gfa_file}")
     graph = MultiDiGraph()
 
     cmap: dict = {'SeqBt1': 'darkred',
@@ -170,6 +176,7 @@ def init_graph(gfa_file: str, gfa_version: str, color: str, n_aligns: int = 3) -
                         weight=4
                     )
     graph.remove_nodes_from(list(isolates(graph)))
+    print(f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Graph for {gfa_file} created!")
     return graph
 
 
@@ -201,5 +208,8 @@ if __name__ == '__main__':
         "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
     args = parser.parse_args()
 
+    print(f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Started nodes_align.py")
     display_graph(show_identity(args.file, args.gfa_version,
                   ['rebeccapurple', 'crimson', 'orchid']))
+    print(
+        f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Script ended sucessfully!")
