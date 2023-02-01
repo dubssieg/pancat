@@ -223,6 +223,6 @@ if __name__ == '__main__':
 
     print(f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Started nodes_align.py")
     display_graph(show_identity(args.file, args.gfa_version,
-                  ['rebeccapurple', 'crimson'], args.score))  # , 'orchid'
+                  ['rebeccapurple', 'crimson', 'orchid'], args.score))
     print(
         f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Script ended sucessfully!")
