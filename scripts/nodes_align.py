@@ -3,6 +3,7 @@ from itertools import combinations, chain
 from argparse import ArgumentParser, SUPPRESS
 from networkx import MultiDiGraph, compose_all, add_path, isolates
 from gfatypes import LineType, Record, GfaStyle
+from collections.abc import Iterable
 from pyvis.network import Network
 import matplotlib.pyplot as plt
 from Bio import Align
@@ -31,7 +32,7 @@ def node_aligner(node: str, nodes_to_align: list) -> list[float]:
     return [s/max_score for s in scores]
 
 
-def show_identity(gfa_files: list, gfa_versions: list, colors: list) -> MultiDiGraph:
+def show_identity(gfa_files: list, gfa_versions: list, colors: list, target_score: float | None = None) -> MultiDiGraph:
     """Given a list of files, inits the networks for each graph,
     merges them, and display dotted links for identical nodes accross graph
 
@@ -40,7 +41,13 @@ def show_identity(gfa_files: list, gfa_versions: list, colors: list) -> MultiDiG
         gfa_versions (list): user-assumed GFA subversions
         colors (list): one color per pangenome graph
     """
-    if any(len(x) != len(y) for (x, y) in combinations(locals().values(), 2)):
+    if target_score is not None:
+        aligner = Align.PairwiseAligner()
+        aligner.open_gap_score = -0.5
+        aligner.extend_gap_score = -0.1
+        aligner.target_end_gap_score = 0.0
+        aligner.query_end_gap_score = 0.0
+    if any(len(x) != len(y) for (x, y) in combinations([x for x in locals().values() if isinstance(x, Iterable)], 2)):
         raise ValueError("Some arguments does not have the same length.")
     if 'rGFA' in gfa_versions:
         graphs: list = [init_simple_graph(
@@ -55,15 +62,19 @@ def show_identity(gfa_files: list, gfa_versions: list, colors: list) -> MultiDiG
             f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Started working on connex component #{idx}")
         all_other_nodes: list = list(
             chain.from_iterable(graphs[:idx] + graphs[idx+1:]))
-        nodes_names: list = [n for n, _ in all_other_nodes]
-        all_other_nodes = [data['seq'] for _, data in all_other_nodes]
-        for node in connex_component:
-            print(
-                f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Aligning {node[0]} to graph...")
-            scores: list = node_aligner(node[1]['seq'], all_other_nodes)
-            for i, score in enumerate(scores):
-                combined_view.add_edge(
-                    node[0], nodes_names[i], color='forestgreen', arrows='', alpha=score)
+        for name_node, node_data in connex_component:
+            for other_name, data_other in all_other_nodes:
+                print(
+                    f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Aligning {name_node} to {other_name}...")
+                if node_data['seq'] == data_other['seq']:
+                    combined_view.add_edge(
+                        name_node, other_name, color='forestgreen', arrows='', alpha=1.0)
+                elif target_score is not None:
+                    score: float = (aligner.align(node_data['seq'], data_other['seq'])[
+                                    0].score)/max(len(node_data['seq']), len(data_other['seq']))
+                    if score >= target_score:
+                        combined_view.add_edge(
+                            name_node, other_name, color='forestgreen', arrows='', alpha=score, title=str(score))
     return combined_view
 
 
@@ -206,10 +217,12 @@ if __name__ == '__main__':
                         help='Evaluates identity of nodes within and across graphs')
     parser.add_argument(
         "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
+    parser.add_argument(
+        "-s", "--score", help="Filters by percentage of identity", required=False, type=float, default=None)
     args = parser.parse_args()
 
     print(f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Started nodes_align.py")
     display_graph(show_identity(args.file, args.gfa_version,
-                  ['rebeccapurple', 'crimson', 'orchid']))
+                  ['rebeccapurple', 'crimson'], args.score))  # , 'orchid'
     print(
         f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Script ended sucessfully!")
