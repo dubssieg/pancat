@@ -3,7 +3,8 @@ from argparse import ArgumentParser, SUPPRESS
 from re import sub
 
 
-def rgfa_to_gfa(input_file: str, output_file: str, p_lines: bool = False, keep_tags: bool = False) -> None:
+def rgfa_to_gfa(input_file: str, output_file: str,
+                names_of_haplotypes: list, p_lines: bool = False, keep_tags: bool = False) -> None:
     """Converts rGFA (minigraph) to GFA1 files by adding header and P-lines
     This process is not lossless !!! We lost tags in-between.
 
@@ -36,14 +37,17 @@ def rgfa_to_gfa(input_file: str, output_file: str, p_lines: bool = False, keep_t
                 elif datas[0] == 'L':
                     if keep_tags:
                         gfa_writer.write(
-                            '\n'+'\t'.join([datas[0], sub('\D', '', datas[1]), datas[2], sub('\D', '', datas[3])]+datas[4:]))
+                            '\n'+'\t'.join([datas[0], sub('\D', '', datas[1]),
+                                            datas[2], sub('\D', '', datas[3])]+datas[4:]))
                     else:
                         gfa_writer.write(
-                            '\n'+'\t'.join([datas[0], sub('\D', '', datas[1]), datas[2], sub('\D', '', datas[3]), datas[4], datas[5]]))
+                            '\n'+'\t'.join([datas[0], sub('\D', '', datas[1]),
+                                            datas[2], sub('\D', '', datas[3]), datas[4], datas[5]]))
                     # datas[5] == cigar
                     # datas[6][5:] == origin_sequence
                     link_informations.append(
-                        (sub('\D', '', datas[1])+datas[2], sub('\D', '', datas[3])+datas[4], datas[5], datas[6][5:]))
+                        (sub('\D', '', datas[1])+datas[2],
+                         sub('\D', '', datas[3])+datas[4], datas[5], datas[6][5:]))
                     edgelist.append((sub('\D', '', datas[1])+datas[2], [], sub(
                         '\D', '', datas[3])+datas[4], int(datas[6][5:])))
                 # We don't really know linetype
@@ -51,39 +55,46 @@ def rgfa_to_gfa(input_file: str, output_file: str, p_lines: bool = False, keep_t
                     gfa_writer.write('\n'+'\t'.join(datas))
 
         if p_lines:
-            dnp: dict = create_p_lines(edgelist)
+            dnp: dict = create_p_lines(edgelist, names_of_haplotypes)
             # Writing P-lines
-            for path_number, (origin, path) in enumerate(dnp.items()):
+            for (origin, path) in dnp.items():
                 gfa_writer.write(
-                    f"\nP\t{path_number+number_of_nodes}\t{','.join(path)}\t*\tSR:i:{origin}")
+                    f"\nP\t{names_of_haplotypes[int(origin)]}\t{','.join(path)}\t*\tSR:i:{origin}")
 
 
-def create_p_lines(edges: list[tuple]) -> dict:
+def create_p_lines(edges: list[tuple], tags: list) -> dict:
     """Assuming edges is a four-part tuple list
     [(edge-a,middle|[],edge-b,sequence-of-edge)]
     computes the reconstruction of genomes.
 
     Args:
         edges (list[tuple]): edge description
+        tags (list): names of each haplotype
     """
     # Init a bank of edges
     bank_of_edges: dict = {int(x): []
                            for x in set([e for _, _, _, e in edges])}
+    if len(bank_of_edges) != len(tags):
+        raise ValueError(
+            f"""Incorrect number of names given the number of haplotypes the file contains.
+            In file : {len(bank_of_edges)} / in tags : {len(tags)}""")
     # We iterate until convergence, which happens when no sequence could be merged
     while edges:
         match iterate_edges(edges, bank_of_edges):
             case None:
-                # We need to complete paths that are not part of the reference with the end and start of the reference sequence
+                # We need to complete paths that are not part
+                # of the reference with the end and start of the reference sequence
                 paths: dict = {str(seq): [start]+mid+[end]
                                for (start, mid, end, seq) in bank_of_edges.values()}
                 refseq: list = paths['0']
-                for id, path in paths.items():
-                    if id != '0':
-                        paths[id] = refseq[0:refseq.index(
-                            paths[id][0])] + path + refseq[refseq.index(paths[id][-1])+1:]
+                for identifier, path in paths.items():
+                    if identifier != '0':
+                        paths[identifier] = refseq[0:refseq.index(
+                            paths[identifier][0])] + path + refseq[refseq.index(paths[identifier][-1])+1:]
                 return paths
             case (new_edge, pos_to_edit):
                 bank_of_edges[pos_to_edit] = new_edge
+    raise ValueError("Terminated without building correct paths.")
 
 
 def iterate_edges(edges: list[tuple], bank_of_edges: dict[int, list]) -> tuple | None:
@@ -134,10 +145,18 @@ if __name__ == "__main__":
         "-p", "--plines", help="Asks to calculate p-lines for graph", action='store_true')
     parser.add_argument(
         "-k", "--keep", help="Keeps rGFA-specific tags in output", action='store_true')
+    parser.add_argument(
+        "-n",
+        "--haplotypes_names",
+        help="Give one name per haplotype, ordered as the same order you did for your rGFA. First item of the list is the reference. Required if you ask for P-lines.",
+        nargs='+',
+        default=[]
+    )
     args = parser.parse_args()
 
     rgfa_to_gfa(
         args.file,
         f"{args.file.split('.')[0]}_gfa1.gfa",
+        names_of_haplotypes=args.haplotypes_names,
         p_lines=args.plines,
         keep_tags=args.keep)
