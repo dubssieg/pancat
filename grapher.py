@@ -4,6 +4,7 @@ from networkx import MultiDiGraph, add_path, isolates
 from mycolorpy import colorlist
 from pyvis.network import Network
 from gfatypes import LineType, Record, GfaStyle
+from math import log10
 
 
 def html_graph(graph: MultiDiGraph, job_name: str) -> None:
@@ -63,31 +64,42 @@ def init_graph(gfa_file: str, gfa_version: str, n_aligns: int) -> MultiDiGraph:
                 case LineType.SEGMENT, _:
                     graph.add_node(
                         gfa_line.line.name,
-                        title=f"{gfa_line.line.length} bp."
+                        title=f"{gfa_line.line.length} bp.",
+                        size=log10(gfa_line.line.length),
+                        color='darkslateblue'
                     )
                 case LineType.WALK, _:
                     if not gfa_line.line.idf == '_MINIGRAPH_':
-                        add_path(
-                            graph,
-                            [node for (node, _) in gfa_line.line.path],
-                            title=gfa_line.line.name,
-                            color=cmap[visited_paths]
-                        )
+                        for i in range(len(gfa_line.line.path)-1):
+                            left_node, left_orient = gfa_line.line.path[i]
+                            right_node, right_orient = gfa_line.line.path[i+1]
+                            graph.add_edge(
+                                left_node,
+                                right_node,
+                                title=gfa_line.line.name,
+                                color=cmap[visited_paths],
+                                label=f"{left_orient.value}/{right_orient.value}"
+                            )
                         visited_paths += 1
                 case LineType.PATH, _:
-                    add_path(
-                        graph,
-                        [node for (node, _) in gfa_line.line.path],
-                        title=gfa_line.line.name,
-                        color=cmap[visited_paths]
-                    )
+                    for i in range(len(gfa_line.line.path)-1):
+                        left_node, left_orient = gfa_line.line.path[i]
+                        right_node, right_orient = gfa_line.line.path[i+1]
+                        graph.add_edge(
+                            left_node,
+                            right_node,
+                            title=gfa_line.line.name,
+                            color=cmap[visited_paths],
+                            label=f"{left_orient.value}/{right_orient.value}"
+                        )
                     visited_paths += 1
                 case LineType.LINE, GfaStyle.RGFA:
                     graph.add_edge(
                         gfa_line.line.start,
                         gfa_line.line.end,
                         title=str(gfa_line.line.origin),
-                        color=cmap[gfa_line.line.origin]
+                        color=cmap[gfa_line.line.origin],
+                        label=gfa_line.line.orientation
                     )
     graph.remove_nodes_from(list(isolates(graph)))
     return graph

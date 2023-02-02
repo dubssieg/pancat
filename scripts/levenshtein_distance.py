@@ -8,9 +8,11 @@ from gfatypes import LineType, Record, GfaStyle
 from pyvis.network import Network
 from Levenshtein import distance
 import matplotlib.pyplot as plt
+from matplotlib.cm import get_cmap
+from matplotlib.colors import rgb2hex
 
 
-def show_identity(gfa_files: list, gfa_versions: list, colors: list, target_score: float | None = None) -> MultiDiGraph:
+def show_identity(gfa_files: list, gfa_versions: list, colors: list, target_score: float | None = None, backbone: bool = False) -> MultiDiGraph:
     """Given a list of files, inits the networks for each graph,
     merges them, and display dotted links for identical nodes accross graph
 
@@ -19,10 +21,11 @@ def show_identity(gfa_files: list, gfa_versions: list, colors: list, target_scor
         gfa_versions (list): user-assumed GFA subversions
         colors (list): one color per pangenome graph
     """
+    cmap = get_cmap('Greens')
     if any(len(x) != len(y) for (x, y) in  # type:ignore
            combinations([x for x in locals().values() if isinstance(x, Iterable)], 2)):  # type:ignore
         raise ValueError("Some arguments does not have the same length.")
-    if 'rGFA' in gfa_versions:
+    if 'rGFA' in gfa_versions or backbone:
         graphs: list = [init_simple_graph(
             gfa, gfa_versions[i], colors[i]) for i, gfa in enumerate(gfa_files)]
     else:
@@ -37,19 +40,20 @@ def show_identity(gfa_files: list, gfa_versions: list, colors: list, target_scor
             chain.from_iterable(graphs[:idx] + graphs[idx+1:]))
         for name_node, node_data in connex_component:
             for other_name, data_other in all_other_nodes:
-                print(
-                    f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Aligning {name_node} to {other_name}...")
-                if node_data['seq'] == data_other['seq']:
-                    combined_view.add_edge(
-                        name_node, other_name, color='forestgreen', arrows='', alpha=1.0)
-                elif len(node_data['seq']) > len(data_other['seq'])*2 or len(node_data['seq'])*2 < len(data_other['seq']):
-                    continue
-                elif target_score is not None:
-                    score: float = 1-(distance(node_data['seq'], data_other['seq']))/max(
-                        len(node_data['seq']), len(data_other['seq']))
-                    if score >= target_score:
+                if not combined_view.has_edge(other_name, name_node):
+                    print(
+                        f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Aligning {name_node} to {other_name}...")
+                    if node_data['seq'] == data_other['seq']:
                         combined_view.add_edge(
-                            name_node, other_name, color='forestgreen', arrows='', alpha=score, title=str(score))
+                            name_node, other_name, color=rgb2hex(cmap(1.0)), arrows='', label='1.0')
+                    elif len(node_data['seq']) > len(data_other['seq'])*2 or len(node_data['seq'])*2 < len(data_other['seq']):
+                        continue
+                    elif target_score is not None:
+                        score: float = 1-(distance(node_data['seq'], data_other['seq']))/max(
+                            len(node_data['seq']), len(data_other['seq']))
+                        if score >= target_score:
+                            combined_view.add_edge(
+                                name_node, other_name, color=rgb2hex(cmap(score)), arrows='', label=str(round(score, 3)))
     return combined_view
 
 
@@ -194,11 +198,13 @@ if __name__ == '__main__':
         "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
     parser.add_argument("-s", "--score", help="Filters by percentage of identity",
                         required=False, type=float, default=None)
+    parser.add_argument(
+        "-b", "--backbone", help="Asks to hide paths within graphs.", action='store_true')
     args = parser.parse_args()
 
     print(
         f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Started nodes_align.py")
     display_graph(show_identity(args.file, args.gfa_version,
-                                ['rebeccapurple', 'crimson', 'orchid'][:len(args.file)], args.score))
+                                ['rebeccapurple', 'crimson', 'orchid'][:len(args.file)], args.score, args.backbone))
     print(
         f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Script ended sucessfully!")
