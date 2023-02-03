@@ -78,7 +78,6 @@ if __name__ == '__main__':
 
     with open('report.txt', 'w', encoding='utf-8') as report:
         i: int = 0
-        for node_a, node_b in nodepairs(grab_paths(args.file, args.gfa_version)):
-            print(f"{node_a} <> {node_b}")
+        for _ in nodepairs(grab_paths(args.file, args.gfa_version)):
             i += 1
         print(f"Total number of splitted sequences : {i}", file=report)
