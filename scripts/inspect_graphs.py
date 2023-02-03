@@ -76,7 +76,9 @@ if __name__ == '__main__':
         "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'])
     args = parser.parse_args()
 
-    i: int = 0
-    for _ in nodepairs(grab_paths(args.file, args.gfa_version)):
-        i += 1
-    print(i)
+    with open('report.txt', 'w', encoding='utf-8') as report:
+        i: int = 0
+        for node_a, node_b in nodepairs(grab_paths(args.file, args.gfa_version)):
+            print(f"{node_a} <> {node_b}")
+            i += 1
+        print(f"Total number of splitted sequences : {i}", file=report)

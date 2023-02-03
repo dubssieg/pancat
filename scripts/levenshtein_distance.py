@@ -21,10 +21,10 @@ def show_identity(gfa_files: list, gfa_versions: list, colors: list, target_scor
         gfa_versions (list): user-assumed GFA subversions
         colors (list): one color per pangenome graph
     """
-    cmap = get_cmap('Greens')
     if any(len(x) != len(y) for (x, y) in  # type:ignore
            combinations([x for x in locals().values() if isinstance(x, Iterable)], 2)):  # type:ignore
-        raise ValueError("Some arguments does not have the same length.")
+        raise ValueError("Some arguments does not have the same length ^^")
+    cmap = get_cmap('Greens')
     if 'rGFA' in gfa_versions or backbone:
         graphs: list = [init_simple_graph(
             gfa, gfa_versions[i], colors[i]) for i, gfa in enumerate(gfa_files)]
@@ -177,7 +177,7 @@ def display_graph(graph: MultiDiGraph) -> None:
         graph (MultiDiGraph): a graph combining multiple pangenomes to highlight thier similarities
     """
     graph_visualizer = Network(
-        height='1080px', width='100%', directed=True)
+        height='100%', width='100%', directed=True)
     graph_visualizer.toggle_physics(True)
     graph_visualizer.from_nx(graph)
     graph_visualizer.set_edge_smooth('dynamic')

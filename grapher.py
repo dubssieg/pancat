@@ -1,10 +1,10 @@
 "Creates a graph we can navigate in."
 from argparse import ArgumentParser, SUPPRESS
-from networkx import MultiDiGraph, add_path, isolates
+from math import log10
+from networkx import MultiDiGraph, isolates
 from mycolorpy import colorlist
 from pyvis.network import Network
 from gfatypes import LineType, Record, GfaStyle
-from math import log10
 
 
 def html_graph(graph: MultiDiGraph, job_name: str) -> None:
