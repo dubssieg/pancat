@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     parser = ArgumentParser(add_help=False)
     parser.add_argument(
-        "file", type=str, help="Path(s) to one or more gfa-like file(s).")
+        "file", type=str, help="Path to a gfa-like file.")
     parser.add_argument('-h', '--help', action='help', default=SUPPRESS,
                         help='Evaluates inconstistencies in topology.')
     parser.add_argument(
