@@ -1,7 +1,8 @@
 "Inspect graphs."
 from typing import Generator
 from argparse import ArgumentParser, SUPPRESS
-from gfatypes import LineType, Record
+from collections import Counter
+from gfa_types import LineType, Record
 
 
 def extract_lines(gfa_file: str, line_type: LineType, gfa_version: str) -> Generator:
@@ -65,6 +66,30 @@ def nodepairs(paths: list[Record]) -> Generator:
             pass
 
 
+def count_snps(input_file: str, paths: dict) -> dict:
+    """Counts the SNP of all paths in a gfa file
+
+    Args:
+        input_file (str): path to a GFA-like file
+
+    Returns:
+        Counter: length distribution of sequences
+    """
+    count_snp = {name: 0 for name in paths.keys()}
+    with open(input_file, 'r', encoding='utf-8') as gfa_reader:
+        for i, seq in enumerate(gfa_reader):
+            datas = seq.split()
+            if datas[0] == 'S' and len(datas[2]) == 1:
+                for name in count_snp.keys():
+                    try:
+                        paths[name].remove(datas[1])
+                        count_snp[name] += 1
+                    except:
+                        pass
+
+    return count_snp
+
+
 if __name__ == '__main__':
 
     parser = ArgumentParser(add_help=False)
@@ -76,8 +101,16 @@ if __name__ == '__main__':
         "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'])
     args = parser.parse_args()
 
+    paths = grab_paths(args.file, args.gfa_version)
+    dict_paths = {path.line.name: [node for node,
+                                   _ in path.line.path] for path in paths}
+    print(len(dict_paths))
+    counts = count_snps(args.file, dict_paths)
+    print(counts)
+
     with open('report.txt', 'w', encoding='utf-8') as report:
         i: int = 0
-        for _ in nodepairs(grab_paths(args.file, args.gfa_version)):
+        for _ in nodepairs(paths):
             i += 1
         print(f"Total number of splitted sequences : {i}", file=report)
+        print(f"SNP counts per walk :\n{counts}")

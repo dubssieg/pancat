@@ -2,4 +2,6 @@ pyvis
 networkx
 mycolorpy
 levenshtein
+gfatypes
+tharos-pytools
 Bio

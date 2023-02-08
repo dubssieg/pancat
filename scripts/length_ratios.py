@@ -186,5 +186,6 @@ if __name__ == "__main__":
         args.file, list) else [args.file.split('.')[0].split('/')[-1]]
 
     lengths: list = [parse_gfa(name) for name in args.file]
+    print(lengths)
 
     plot_ratio(lengths, file_names, 1, 10000, 1)

@@ -1,7 +1,7 @@
 'Extract sequences given a graph'
 from argparse import ArgumentParser, SUPPRESS
 from typing import Generator
-from gfatypes import LineType, Record, GfaStyle
+from gfa_types import LineType, Record, GfaStyle
 
 
 def grab_paths(gfa_file: str, gfa_version: str) -> list[Record]:

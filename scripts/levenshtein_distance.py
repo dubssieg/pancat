@@ -4,7 +4,7 @@ from itertools import combinations, chain
 from argparse import ArgumentParser, SUPPRESS
 from collections.abc import Iterable
 from networkx import MultiDiGraph, compose_all, add_path, isolates
-from gfatypes import LineType, Record, GfaStyle
+from gfa_types import LineType, Record, GfaStyle
 from pyvis.network import Network
 from Levenshtein import distance
 import matplotlib.pyplot as plt
