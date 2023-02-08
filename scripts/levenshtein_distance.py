@@ -4,12 +4,12 @@ from itertools import combinations, chain
 from argparse import ArgumentParser, SUPPRESS
 from collections.abc import Iterable
 from networkx import MultiDiGraph, compose_all, add_path, isolates
-from gfa_types import LineType, Record, GfaStyle
 from pyvis.network import Network
-from Levenshtein import distance
 import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
 from matplotlib.colors import rgb2hex
+from Levenshtein import distance
+from gfatypes.gfatypes import LineType, Record, GfaStyle
 
 
 def show_identity(gfa_files: list, gfa_versions: list, colors: list, target_score: float | None = None, backbone: bool = False) -> MultiDiGraph:

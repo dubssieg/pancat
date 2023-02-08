@@ -1,8 +1,7 @@
 "Inspect graphs."
 from typing import Generator
 from argparse import ArgumentParser, SUPPRESS
-from collections import Counter
-from gfa_types import LineType, Record
+from gfatypes.gfatypes import LineType, Record
 
 
 def extract_lines(gfa_file: str, line_type: LineType, gfa_version: str) -> Generator:

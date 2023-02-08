@@ -4,7 +4,7 @@ from math import log10
 from networkx import MultiDiGraph, isolates
 from mycolorpy import colorlist
 from pyvis.network import Network
-from gfatypes import LineType, Record, GfaStyle
+from gfatypes.gfatypes import LineType, Record, GfaStyle
 
 
 def html_graph(graph: MultiDiGraph, job_name: str) -> None:

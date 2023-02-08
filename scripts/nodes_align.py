@@ -5,10 +5,10 @@ from itertools import combinations, chain
 from argparse import ArgumentParser, SUPPRESS
 from collections.abc import Iterable
 from networkx import MultiDiGraph, compose_all, add_path, isolates
-from gfa_types import LineType, Record, GfaStyle
 from pyvis.network import Network
 import matplotlib.pyplot as plt
 from Bio import Align
+from gfatypes.gfatypes import LineType, Record, GfaStyle
 
 
 def node_aligner(node: str, nodes_to_align: list) -> list[float]:
