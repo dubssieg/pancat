@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
 from matplotlib.colors import rgb2hex
 from Levenshtein import distance
-from gfatypes.gfatypes import LineType, Record, GfaStyle
+from gfatypes import LineType, Record, GfaStyle
+from tharospytools import get_palette
 
 
 def show_identity(gfa_files: list, gfa_versions: list, colors: list, target_score: float | None = None, backbone: bool = False) -> MultiDiGraph:
@@ -204,7 +205,14 @@ if __name__ == '__main__':
 
     print(
         f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Started nodes_align.py")
-    display_graph(show_identity(args.file, args.gfa_version,
-                                ['rebeccapurple', 'crimson', 'orchid'][:len(args.file)], args.score, args.backbone))
+    display_graph(
+        show_identity(
+            args.file,
+            args.gfa_version,
+            get_palette(len(args.file)),
+            args.score,
+            args.backbone
+        )
+    )
     print(
         f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Script ended sucessfully!")

@@ -8,7 +8,7 @@ from networkx import MultiDiGraph, compose_all, add_path, isolates
 from pyvis.network import Network
 import matplotlib.pyplot as plt
 from Bio import Align
-from gfatypes.gfatypes import LineType, Record, GfaStyle
+from gfatypes import LineType, Record, GfaStyle
 
 
 def node_aligner(node: str, nodes_to_align: list) -> list[float]:

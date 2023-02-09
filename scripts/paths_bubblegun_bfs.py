@@ -26,6 +26,7 @@ def bfs_step(graph: Graph, output_path: str, starting_node: str, number_of_nodes
         append=True,
         optional_info=not graph.compacted
     )
+    return set_of_nodes
 
 
 def paths_step(origin_file: str, file_to_edit: str, extracted_nodes: set, gfa_version: str, gfa_output: str) -> None:
@@ -67,7 +68,7 @@ def paths_step(origin_file: str, file_to_edit: str, extracted_nodes: set, gfa_ve
         case GfaStyle.GFA1_1:
             with open(file_to_edit, 'a', encoding='utf-8') as gfa_writer:
                 gfa_writer.writelines(
-                    [f"W\t{path.line.name}\t{i}\t{''.join([orientation.value+node for node,orientation in path.line.path]).replace('+', '>').replace('-', '<')}\t*\n" for i, path in enumerate(embed_paths) if path is not None])
+                    [f"W\t{path.line.name}\t{i}\t{path.line.name}\t0\t0\t{''.join([orientation.value+node for node,orientation in path.line.path]).replace('+', '>').replace('-', '<')}\t*\n" for i, path in enumerate(embed_paths) if path is not None])
         case _:
             raise NotImplementedError(
                 "Functionnality currently not implemented.")

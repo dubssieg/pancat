@@ -5,7 +5,7 @@ from os import remove, path
 from Bio import SeqIO
 
 
-def export_mapping(paf_file: str, save: bool = False) -> list:
+def export_mapping(paf_file: str, save: bool = False, threshold: int = 4000000) -> list:
     """Exports a list of dicts
 
     Args:
@@ -23,7 +23,7 @@ def export_mapping(paf_file: str, save: bool = False) -> list:
                 'sequence_length':int(l.split()[10])
             }
             for l in open(paf_file, "r", encoding="utf-8")
-            if int(l.split()[10]) >= 4000000
+            if int(l.split()[10]) >= threshold
         ],
         key=lambda x: x['sequence_length']
     )[::-1]
