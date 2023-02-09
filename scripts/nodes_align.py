@@ -6,9 +6,9 @@ from argparse import ArgumentParser, SUPPRESS
 from collections.abc import Iterable
 from networkx import MultiDiGraph, compose_all, add_path, isolates
 from pyvis.network import Network
-import matplotlib.pyplot as plt
 from Bio import Align
 from gfatypes import LineType, Record, GfaStyle
+from tharospytools import get_palette
 
 
 def node_aligner(node: str, nodes_to_align: list) -> list[float]:
@@ -122,21 +122,6 @@ def init_simple_graph(gfa_file: str, gfa_version: str, color: str) -> MultiDiGra
     return graph
 
 
-def get_palette(number_of_colors: int) -> list:
-    """Returns a number_of_colors-sized palette, as a list,
-    that one can access with colors[i].
-
-    Args:
-        number_of_colors (int): number of colors needed
-
-    Returns:
-        list: palette of colors
-    """
-    colormap = plt.cm.viridis  # type:ignore
-    number_of_colors = min(colormap.N, number_of_colors)
-    return [colormap(int(x*colormap.N/number_of_colors)) for x in range(number_of_colors)]
-
-
 def init_graph(gfa_file: str, gfa_version: str, color: str) -> MultiDiGraph:
     """Initializes the graph without displaying it
 
@@ -232,7 +217,13 @@ if __name__ == '__main__':
         with redirect_stdout(f):
             print(
                 f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Started nodes_align.py")
-            display_graph(show_identity(args.file, args.gfa_version,
-                                        ['rebeccapurple', 'crimson', 'orchid'][:len(args.file)], args.score))
+            display_graph(
+                show_identity(
+                    args.file,
+                    args.gfa_version,
+                    get_palette(len(args.file)),
+                    args.score
+                )
+            )
             print(
                 f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Script ended sucessfully!")
