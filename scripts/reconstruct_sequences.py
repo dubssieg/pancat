@@ -1,10 +1,10 @@
 'Extract sequences given a graph'
 from argparse import ArgumentParser, SUPPRESS
 from typing import Generator
-from gfatypes.gfatypes import LineType, Record, GfaStyle
+from gfatypes import LineType, Record, GfaStyle
 
 
-def grab_paths(gfa_file: str, gfa_version: str) -> list[Record]:
+def grab_paths(gfa_file: str, gfa_version: str, reference: str) -> list[Record]:
     """From a given gfa-like file, grabs the path of each haplotype
 
     Args:
@@ -25,9 +25,15 @@ def grab_paths(gfa_file: str, gfa_version: str) -> list[Record]:
             match (gfa_line.linetype, version):
                 case LineType.WALK, _:
                     if not gfa_line.line.idf == '_MINIGRAPH_':  # type:ignore
-                        paths.append(gfa_line)
+                        if gfa_line.line.idf == reference:
+                            paths = [gfa_line] + paths
+                        else:
+                            paths.append(gfa_line)
                 case LineType.PATH, _:
-                    paths.append(gfa_line)
+                    if gfa_line.line.idf == reference:
+                        paths = [gfa_line] + paths
+                    else:
+                        paths.append(gfa_line)
                 case LineType.LINE, GfaStyle.RGFA:
                     raise NotImplementedError('rGFA currently not supported')
                 case _:
@@ -141,6 +147,13 @@ if __name__ == '__main__':
         choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
     )
     parser.add_argument(
+        "-r",
+        "--reference",
+        help="Tells the reference sequence we seek start and stop into",
+        required=True,
+        type=str
+    )
+    parser.add_argument(
         '--start',
         type=str,
         help='To specifiy a starting node on reference to create a subgraph',
@@ -157,7 +170,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     followed_paths: list = node_range(grab_paths(
-        args.file, args.gfa_version), args.start, args.stop)
+        args.file, args.gfa_version, args.reference), args.start, args.stop)
 
     if args.split:
         for i, sequence in enumerate(reconstruct(args.file, args.gfa_version, followed_paths)):
