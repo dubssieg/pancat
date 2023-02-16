@@ -3,5 +3,6 @@ networkx
 mycolorpy
 levenshtein
 gfatypes
+gfagraphs
 tharos-pytools
 Bio

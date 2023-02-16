@@ -9,7 +9,8 @@ Note that any non-referenced walk in this field means that the node
 is not inside the given walk.
 """
 from argparse import ArgumentParser, SUPPRESS
-from gfatypes import Record, GfaStyle
+from json import dumps
+from gfagraphs import Record, GfaStyle
 
 
 def calculate_sequence_offsets(node_data: list[tuple], walks: list[Record]) -> list[dict]:
@@ -23,17 +24,24 @@ def calculate_sequence_offsets(node_data: list[tuple], walks: list[Record]) -> l
         list[dict]: a mapping {walk:offset_in_walk} for each walk, and for each node
     """
     offsets: list[int] = [0 for _ in range(len(walks))]
-    sequence_offsets: list[dict] = []
+    orientations: list[str] = ['' for _ in range(len(walks))]
+    sequence_offsets: list[dict] = list()
     walks_nodes: list[list] = [
-        [node for node, _ in walk.line.path] for walk in walks]
+        [node for node, _ in walk.datas["path"]] for walk in walks]
+    walks_orientations: list[list] = [
+        [ori for _, ori in walk.datas["path"]] for walk in walks]
     for (name, length) in node_data:
         inside_walks: list[int] = list()
         for i, walk in enumerate(walks_nodes):
-            if name in walk:
+            try:
+                pos: int = walk.index(name)
                 inside_walks.append(i)
                 offsets[i] += length
+                orientations[i] = str(walks_orientations[i][pos].value)
+            except ValueError:
+                pass
         sequence_offsets.append(
-            {walks[x].line.idf: (offsets[x]-length, offsets[x])
+            {walks[x].datas["name"]: (offsets[x]-length, offsets[x], orientations[x])
              for x in inside_walks}
         )
 
@@ -69,7 +77,7 @@ def add_offsets_to_gfa(gfa_file: str, output_file: str, gfa_version: str) -> Non
             for line in gfa_reader:
                 if line.startswith('S'):
                     gfa_writer.write(
-                        f"{line.strip()}\tPO:J:{nodes_offsets[collected_nodes]}\n")
+                        f"{line.strip()}\tPO:J:{dumps(nodes_offsets[collected_nodes])}\n")
                     collected_nodes += 1
                 else:
                     gfa_writer.write(line)
