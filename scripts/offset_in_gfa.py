@@ -2,9 +2,10 @@
 Here, we aim to extend the current GFA tag format by adding tags
 that do respect the GFA naming convention.
 A JSON string, PO (Path Offset) positions, relative to paths.
-Hence, PO:J:{'w1':(334,335),'w2':(245,247} tells that the walk/path w1
+Hence, PO:J:{'w1':(334,335,'+'),'w2':(245,247,'-')} tells that the walk/path w1
 contains the sequence starting at position 334 and ending at position 335,
-and the walk/path w2 contains the sequence starting at the offset 245 (ending 247).
+and the walk/path w2 contains the sequence starting at the offset 245 (ending 247),
+and that the sequences are reversed one to each other.
 Note that any non-referenced walk in this field means that the node
 is not inside the given walk.
 """

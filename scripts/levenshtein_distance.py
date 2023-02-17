@@ -5,11 +5,10 @@ from argparse import ArgumentParser, SUPPRESS
 from collections.abc import Iterable
 from networkx import MultiDiGraph, compose_all, add_path, isolates
 from pyvis.network import Network
-import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
 from matplotlib.colors import rgb2hex
 from Levenshtein import distance
-from gfatypes import LineType, Record, GfaStyle
+from gfagraphs import Record, GfaStyle, Segment, Line, Walk, Path
 from tharospytools import get_palette
 
 
@@ -78,37 +77,21 @@ def init_simple_graph(gfa_file: str, gfa_version: str, color: str) -> MultiDiGra
     with open(gfa_file, "r", encoding="utf-8") as reader:
         for line in reader:
             gfa_line: Record = Record(line, gfa_version)
-            match gfa_line.linetype:
-                case LineType.SEGMENT:
-                    graph.add_node(
-                        f"{gfa_file.split('/')[-1].split('.')[0]}_{gfa_line.line.name}",
-                        title=f"{gfa_line.line.length} bp.",
-                        seq=line.split()[2],
-                        color=color
-                    )
-                case LineType.LINE:
-                    graph.add_edge(
-                        f"{gfa_file.split('/')[-1].split('.')[0]}_{gfa_line.line.start}",
-                        f"{gfa_file.split('/')[-1].split('.')[0]}_{gfa_line.line.end}",
-                        color=color,
-                        weight=4
-                    )
+            if isinstance(gfa_line, Segment):
+                graph.add_node(
+                    f"{gfa_file.split('/')[-1].split('.')[0]}_{gfa_line.datas['name']}",
+                    title=f"{gfa_line.datas['length']} bp.",
+                    seq=line.split()[2],
+                    color=color
+                )
+            if isinstance(gfa_line, Line):
+                graph.add_edge(
+                    f"{gfa_file.split('/')[-1].split('.')[0]}_{gfa_line.datas['start']}",
+                    f"{gfa_file.split('/')[-1].split('.')[0]}_{gfa_line.datas['end']}",
+                    color=color,
+                    weight=4
+                )
     return graph
-
-
-def get_palette(number_of_colors: int) -> list:
-    """Returns a number_of_colors-sized palette, as a list,
-    that one can access with colors[i].
-
-    Args:
-        number_of_colors (int): number of colors needed
-
-    Returns:
-        list: palette of colors
-    """
-    colormap = plt.cm.viridis  # type:ignore
-    number_of_colors = min(colormap.N, number_of_colors)
-    return [colormap(int(x*colormap.N/number_of_colors)) for x in range(number_of_colors)]
 
 
 def init_graph(gfa_file: str, gfa_version: str, color: str) -> MultiDiGraph:
@@ -139,33 +122,22 @@ def init_graph(gfa_file: str, gfa_version: str, color: str) -> MultiDiGraph:
     with open(gfa_file, "r", encoding="utf-8") as reader:
         for line in reader:
             gfa_line: Record = Record(line, gfa_version)
-            match gfa_line.linetype:
-                case LineType.SEGMENT:
-                    graph.add_node(
-                        f"{gfa_file.split('/')[-1].split('.')[0]}_{gfa_line.line.name}",
-                        title=f"{gfa_line.line.length} bp.",
-                        seq=line.split()[2],
-                        color=color
-                    )
-                case LineType.WALK:
-                    if not gfa_line.line.idf == '_MINIGRAPH_':  # type:ignore
-                        add_path(
-                            graph,
-                            [f"{gfa_file.split('/')[-1].split('.')[0]}_{node}" for (
-                                node, _) in gfa_line.line.path],  # type:ignore
-                            title=gfa_line.line.name,  # type:ignore
-                            color=cmap[gfa_line.line.name],  # type:ignore
-                            weight=4
-                        )
-                case LineType.PATH:
-                    add_path(
-                        graph,
-                        [f"{gfa_file.split('/')[-1].split('.')[0]}_{node}" for (
-                            node, _) in gfa_line.line.path],  # type:ignore
-                        title=gfa_line.line.name,  # type:ignore
-                        color=cmap[gfa_line.line.name],  # type:ignore
-                        weight=4
-                    )
+            if isinstance(gfa_line, Segment):
+                graph.add_node(
+                    f"{gfa_file.split('/')[-1].split('.')[0]}_{gfa_line.datas['name']}",
+                    title=f"{gfa_line.datas['length']} bp.",
+                    seq=line.split()[2],
+                    color=color
+                )
+            if isinstance(gfa_line, Walk) or isinstance(gfa_line, Path):
+                add_path(
+                    graph,
+                    [f"{gfa_file.split('/')[-1].split('.')[0]}_{node}" for (
+                        node, _) in gfa_line.datas['path']],
+                    title=gfa_line.datas['name'],
+                    color=cmap[gfa_line.datas['name']],
+                    weight=4
+                )
     graph.remove_nodes_from(list(isolates(graph)))
     print(f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Graph for {gfa_file} created!")
     return graph
@@ -203,8 +175,6 @@ if __name__ == '__main__':
         "-b", "--backbone", help="Asks to hide paths within graphs.", action='store_true')
     args = parser.parse_args()
 
-    print(
-        f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Started nodes_align.py")
     display_graph(
         show_identity(
             args.file,
@@ -214,5 +184,3 @@ if __name__ == '__main__':
             args.backbone
         )
     )
-    print(
-        f"[{datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}] Script ended sucessfully!")

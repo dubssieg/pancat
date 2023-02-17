@@ -1,7 +1,7 @@
 'Extract sequences given a graph'
 from argparse import ArgumentParser, SUPPRESS
 from typing import Generator
-from gfatypes import LineType, Record, GfaStyle
+from gfagraphs import Record, GfaStyle, Walk, Path, Line, Segment
 
 
 def grab_paths(gfa_file: str, gfa_version: str, reference: str) -> list[Record]:
@@ -22,22 +22,21 @@ def grab_paths(gfa_file: str, gfa_version: str, reference: str) -> list[Record]:
     with open(gfa_file, "r", encoding="utf-8") as reader:
         for line in reader:
             gfa_line: Record = Record(line, gfa_version)
-            match (gfa_line.linetype, version):
-                case LineType.WALK, _:
-                    if not gfa_line.line.idf == '_MINIGRAPH_':  # type:ignore
-                        if gfa_line.line.idf == reference:
-                            paths = [gfa_line] + paths
-                        else:
-                            paths.append(gfa_line)
-                case LineType.PATH, _:
-                    if gfa_line.line.idf == reference:
+            if isinstance(gfa_line, Walk):
+                if not gfa_line.datas['id'] == '_MINIGRAPH_':
+                    if gfa_line.datas['id'] == reference:
                         paths = [gfa_line] + paths
                     else:
                         paths.append(gfa_line)
-                case LineType.LINE, GfaStyle.RGFA:
-                    raise NotImplementedError('rGFA currently not supported')
-                case _:
-                    pass
+            elif isinstance(gfa_line, Path):
+                if gfa_line.datas['name'] == reference:
+                    paths = [gfa_line] + paths
+                else:
+                    paths.append(gfa_line)
+            elif isinstance(gfa_line, Line) and version == GfaStyle.RGFA:
+                raise NotImplementedError('rGFA currently not supported')
+            else:
+                pass
     return paths
 
 
@@ -63,26 +62,26 @@ def node_range(
     if node_start is None and node_end is None:
         return paths_to_follow
     path_seq: list = [seq for seq,
-                      _ in paths_to_follow[0].line.path]  # type:ignore
+                      _ in paths_to_follow[0].datas['path']]
     if node_start is None:
         node_start = path_seq[0]
     if node_end is None:
         node_end = path_seq[-1]
     try:
-        paths_to_follow[0].line.path = paths_to_follow[0].line.path[path_seq.index(  # type:ignore
+        paths_to_follow[0].datas['path'] = paths_to_follow[0].datas['path'][path_seq.index(
             node_start):path_seq.index(node_end)]
         path_seq: list = [seq for seq,
-                          _ in paths_to_follow[0].line.path]  # type:ignore
+                          _ in paths_to_follow[0].datas['path']]
     except ValueError as exc:
         raise ValueError(
             'Query nodes are not in reference sequence. Please specify nodes within it.') from exc
 
     for path in paths_to_follow[1:]:
         path_query: list = [seq for seq,
-                            _ in path.line.path]  # type:ignore
+                            _ in path.datas['path']]
         start_index: int = get_node_position(path_seq, path_query)
         stop_index: int = get_node_position(path_seq, path_query[::-1])
-        path.line.path = path.line.path[start_index:stop_index]  # type:ignore
+        path.datas['path'] = path.datas['path'][start_index:stop_index]
     return paths_to_follow
 
 
@@ -116,15 +115,15 @@ def reconstruct(gfa_file: str, gfa_version: str, paths_to_follow: list[Record]) 
         Generator: a list of ordered subsequences that are the DNA sequences the path goes through
     """
     for path in paths_to_follow:
-        path_seq: list = [seq for seq, _ in path.line.path]  # type:ignore
+        path_seq: list = [seq for seq, _ in path.datas['path']]
         reconstruct_seq: list = ['' for _ in range(len(path_seq))]
         with open(gfa_file, "r", encoding="utf-8") as reader:
             for line in reader:
                 gfa_line: Record = Record(line, gfa_version)
-                if isinstance(gfa_line.line, Record.Segment):
+                if isinstance(gfa_line, Segment):
                     try:
                         idx: int = path_seq.index(
-                            gfa_line.line.name)  # type:ignore
+                            gfa_line.datas['name'])
                         reconstruct_seq[idx] = line.split()[2]
                     except ValueError:
                         pass
@@ -176,9 +175,9 @@ if __name__ == '__main__':
         for i, sequence in enumerate(reconstruct(args.file, args.gfa_version, followed_paths)):
             with open(f"{args.out}_{i}.fasta", "w", encoding="utf-8") as writer:
                 writer.write(
-                    f"> {followed_paths[i].line.name}\n{''.join(sequence)}\n")  # type:ignore
+                    f"> {followed_paths[i].datas['name']}\n{''.join(sequence)}\n")
     else:
         with open(f"{args.out}.fasta", "w", encoding="utf-8") as writer:
             for i, sequence in enumerate(reconstruct(args.file, args.gfa_version, followed_paths)):
                 writer.write(
-                    f"> {followed_paths[i].line.name}\n{''.join(sequence)}\n")  # type:ignore
+                    f"> {followed_paths[i].datas['name']}\n{''.join(sequence)}\n")
