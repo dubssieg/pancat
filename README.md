@@ -2,13 +2,13 @@
 [![](https://img.shields.io/badge/Documentation-unfinished-orange.svg)]()
 [![](https://img.shields.io/badge/build-passing-green.svg)]()
 
-# PANGRAPHS - Visualisation et analyse de fichiers GFA
+# PANGRAPHS - GFA visualisation and exploration
 
 Does pangenome graphs visualisation (sort of) and many scripts for performing various actions on such graphs.
 
 ## Installation
 
-Requires python >=3.10.
+Requires **python >=3.10**.
 
 You can install pangraphs by running `python setup.py install`, which will enlable command-line usage of the program.
 
