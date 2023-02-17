@@ -4,7 +4,11 @@
 
 # PANGRAPHS - GFA visualisation and exploration
 
-Does pangenome graphs visualisation (sort of) and many scripts for performing various actions on such graphs.
+Pangenome graphs visualisation (sort of) with interactive html files, and implementations of many scripts for performing various actions on GFA-like graphs.
+
+<p align="center">
+  <img src="https://github.com/Tharos-ux/pangraphs/blob/master/toy_example/graph.png" width="90%" />
+</p>
 
 ## Installation
 
