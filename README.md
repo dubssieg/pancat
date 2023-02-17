@@ -7,7 +7,7 @@
 Pangenome graphs visualisation (sort of) with interactive html files, and implementations of many scripts for performing various actions on GFA-like graphs.
 
 <p align="center">
-  <img src="https://github.com/Tharos-ux/pangraphs/blob/main/toy_examples/graph.png" width="90%" />
+  <img src="toy_examples/graph.png" width="100%" />
 </p>
 
 ## Installation
