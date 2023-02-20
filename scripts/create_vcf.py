@@ -78,16 +78,16 @@ def get_graph_structure(gfa_file: str, gfa_version: str, reference_path: str, ch
 
 def render_vcf(output_file: str, graph_variants: dict) -> None:
     "Creates a VCF file"
-    vcf_header: str = f"##fileformat=VCFv4.2\n##source=pangraphs v{version('pangraphs')}\n##INFO=<ID=AN,Number=R,Type=String,Description=\"Name of the alternative path\">\n##INFO=<ID=AO,Number=R,Type=Integer,Description=\"Offset (start) for alternative sequence\">\n##INFO=<ID=OR,Number=1,Type=String,Description=\"Orientation for reference sequence\">\n##INFO=<ID=OA,Number=1,Type=String,Description=\"Orientation for alternate sequence\">\n##INFO=<ID=SB,Number=0,Type=Flag,Description=\"If variant is inside a superbubble\">\n#CHROM\tID\tPOS\tREF\tALT\tQUAL\tFILTER\tINFO\n"
+    vcf_header: str = f"##fileformat=VCFv4.2\n##source=pangraphs v{version('pangraphs')}\n##INFO=<ID=NA,Number=1,Type=String,Description=\"Name of the alternative path\">\n##INFO=<ID=AO,Number=1,Type=Integer,Description=\"Offset (start) for alternative sequence\">\n##INFO=<ID=OR,Number=1,Type=String,Description=\"Orientation for reference sequence\">\n##INFO=<ID=OA,Number=1,Type=String,Description=\"Orientation for alternate sequence\">\n##INFO=<ID=BS,Number=0,Type=Flag,Description=\"If variant is inside a superbubble\">\n#CHROM\tID\tPOS\tREF\tALT\tQUAL\tFILTER\tINFO\n"
     quality: float = 60.0
     filter_info: str = '.'
     with open(output_file, 'w', encoding='utf-8') as vcf_writer:
         vcf_writer.write(vcf_header)
         for id, variant in graph_variants.items():
             for subvar, suboff in variant['alt_offset']:
-                flags = ";SB" if variant['superbubble'] else ''
+                flags = ";BS" if variant['superbubble'] else ''
                 vcf_writer.write(
-                    f"{variant['chrom']}\t{id}\t{variant['ref_offset']}\t{variant['ref']}\t{variant['alt']}\t{quality}\t{filter_info}\tAN={subvar};AO={suboff[0]};OR={variant['ref_offset']};OA={suboff[2]}{flags}\n")
+                    f"{variant['chrom']}\t{id}\t{variant['ref_offset']}\t{variant['ref']}\t{variant['alt']}\t{quality}\t{filter_info}\tNA={subvar};AO={suboff[0]};OR={variant['ref_offset']};OA={suboff[2]}{flags}\n")
 
 
 if __name__ == "__main__":
