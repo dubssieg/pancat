@@ -303,7 +303,7 @@ def main() -> None:
     elif args.subcommands == 'scaffold':
         isolate_scaffolds(fasta_file=args.file, out_file=args.out,
                           paf_file=args.paffile, chromosom=args.chromosom)
-    elif args.commands == 'grapher':
+    elif args.subcommands == 'grapher':
         pangenome_graph: MultiDiGraph = pGraph(
             args.file,
             args.gfa_version
@@ -313,7 +313,7 @@ def main() -> None:
             pangenome_graph,
             args.job_name
         )
-    elif args.commands == 'levenshtein':
+    elif args.subcommands == 'levenshtein':
         display_graph(
             show_identity(
                 args.file,
@@ -323,7 +323,7 @@ def main() -> None:
                 args.backbone
             )
         )
-    elif args.commands == 'compare':
+    elif args.subcommands == 'compare':
         if len(args.file) < 2:
             parser.error("Please specify at least two GFA files as input.")
         if len(args.file) != len(args.gfa_version):
@@ -335,26 +335,26 @@ def main() -> None:
                 path, nodes, graphs, args.paths)  # type: ignore
             print(datas)
             compare_display_graph(full_graph, f"offset_{i}")
-    elif args.commands == 'convert':
+    elif args.subcommands == 'convert':
         rgfa_to_gfa(
             args.file,
             f"{args.file.split('.')[0]}_gfa1.gfa",
             names_of_haplotypes=args.haplotypes_names,
             p_lines=args.plines,
             keep_tags=args.keep)
-    elif args.commands == 'length':
+    elif args.subcommands == 'length':
         file_names: list = [filepath.split('.')[0].split('/')[-1] for filepath in args.file] if isinstance(
             args.file, list) else [args.file.split('.')[0].split('/')[-1]]
         lengths: list = [parse_gfa(name) for name in args.file]
         plot_ratio(lengths, file_names, 1, args.xmax, 1)
-    elif args.commands == 'vcfmatch':
+    elif args.subcommands == 'vcfmatch':
         vcf_heatmap(match_nodes_to_vcf(
             args.gfa, vcf_parser(args.vcf), args.score))
-    elif args.commands == 'reconstruct':
+    elif args.subcommands == 'reconstruct':
         followed_paths: list = node_range(grab_paths(
             args.file, args.gfa_version, args.reference), args.start, args.stop)
 
-        if args.split:
+        if args.subsplit:
             for i, sequence in enumerate(reconstruct(args.file, args.gfa_version, followed_paths)):
                 with open(f"{args.out}_{i}.fasta", "w", encoding="utf-8") as writer:
                     writer.write(
@@ -364,7 +364,7 @@ def main() -> None:
                 for i, sequence in enumerate(reconstruct(args.file, args.gfa_version, followed_paths)):
                     writer.write(
                         f"> {followed_paths[i].datas['name']}\n{''.join(sequence)}\n")
-    elif args.commands == 'reconstruct':
+    elif args.subcommands == 'reconstruct':
         fmap = mapper(args.gfa, args.fasta)
         dotgrid_plot(fmap, nodes_to_highlight=args.highlight)
 
