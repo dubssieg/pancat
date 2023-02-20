@@ -2,20 +2,20 @@
 from sys import version_info, stderr
 from setuptools import setup, find_packages
 
-
+NAME = 'pangraphs'
 CURRENT_PYTHON = version_info[:2]
 REQUIRED_PYTHON = (3, 10)
 
 if CURRENT_PYTHON < REQUIRED_PYTHON:
     stderr.write(
-        f"Pangraphs requires Python 3.10 or higher and your current version is {CURRENT_PYTHON}.")
+        f"{NAME} requires Python 3.10 or higher and your current version is {CURRENT_PYTHON}.")
     exit(1)
 
 with open("requirements.txt", "r", encoding='utf-8') as fh:
     requirements = [line.strip() for line in fh]
 
 setup(
-    name='pangraphs',
+    name=NAME,
     version='0.0.1',
     description='Tools for manipulating and visualising GFA file format',
     url='https://github.com/Tharos-ux/gfatypes',
