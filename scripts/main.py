@@ -17,6 +17,7 @@ from scripts.length_ratios import parse_gfa, plot_ratio
 from scripts.vcf_on_graph import vcf_heatmap, match_nodes_to_vcf, vcf_parser
 from scripts.reconstruct_sequences import reconstruct, node_range, grab_paths
 from scripts.map_graph_nodes import mapper, dotgrid_plot, show_alignments, exact_mapper, get_lengths
+from scripts.create_vcf import render_vcf, get_graph_structure
 
 
 parser: ArgumentParser = ArgumentParser(
@@ -274,6 +275,21 @@ parser_align.add_argument(
 parser_align.add_argument(
     "-n", "--highlight", type=str, help="nodes to highlight in another color", nargs='+')
 
+## Subparser for create_vcf ##
+
+parser_vcf: ArgumentParser = subparsers.add_parser(
+    'vcf', help="(Experimental) Aims to extract variants from a GFA graph. Calls bubbles inside the graph and proceeds to check if node is in reference or not. If not, interprets it as a variant, and seeks a sequence it refers too. Requires PO offset (pangraphs offset) on your GFA input file.")
+parser_vcf.add_argument("file", type=str, help="Input GFA file")
+parser_vcf.add_argument("output", type=str,
+                        help="Output path for VCF (with extension)")
+parser_vcf.add_argument(
+    "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'])
+
+parser_vcf.add_argument(
+    "-c", "--chromosom", help="Name of the chromosom the graph is from", required=True, type=str)
+parser_vcf.add_argument(
+    "-r", "--reference", help="Name of the reference path inside graph", required=True, type=str)
+
 
 #######################################
 
@@ -370,6 +386,9 @@ def main() -> None:
 
         show_alignments(exact_mapper(args.gfa, args.fasta),
                         get_lengths(args.fasta), nodes_to_highlight=args.highlight)
+    elif args.subcommands == 'vcf':
+        render_vcf(args.output, get_graph_structure(
+            args.file, args.gfa_version, args.reference, args.chromosom))
     else:
         print("Unknown command. Please use the help to see available commands.")
         exit(1)
