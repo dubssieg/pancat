@@ -1,4 +1,5 @@
 matplotlib
+seaborn
 numpy
 pyvis
 networkx
@@ -7,4 +8,5 @@ levenshtein
 gfatypes
 gfagraphs
 tharos-pytools
+BubbleGun
 Bio
