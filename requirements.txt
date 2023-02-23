@@ -9,4 +9,6 @@ gfatypes
 gfagraphs
 tharos-pytools
 BubbleGun
+statsmodels
+resource
 Bio

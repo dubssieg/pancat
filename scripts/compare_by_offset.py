@@ -7,7 +7,7 @@ from pyvis.network import Network
 from gfagraphs import Graph
 
 
-def get_backbone(files: list, versions: list) -> Generator:
+def get_backbone(files: list, versions: list, with_sequences: bool = False) -> Generator:
     """Iterates through pairs of files, computes their graphs to extract nodes positions and paths
 
     Args:
@@ -23,7 +23,7 @@ def get_backbone(files: list, versions: list) -> Generator:
         path_map: list = list()
         graph_map: list = list()
         for file, ver in duet:
-            graph: Graph = Graph(file, ver)
+            graph: Graph = Graph(file, ver, with_sequences)
             node_map.append({node.datas["name"]: node.datas['PO']
                             for node in graph.segments})
             path_map.append(
@@ -78,6 +78,8 @@ def compare_positions(paths: list[dict], nodes_datas: list[dict], graphs: list[d
             name_a = f"{name_graph_a}_{path_a[a][0]}"
             name_b = f"{name_graph_b}_{path_b[b][0]}"
 
+            # print(f'{name_a}: {start_a}/{end_a} ; {name_b}: {start_b}/{end_b}')
+
             if start_a == start_b and end_a == end_b:
                 # A & B are the same
                 if ori_a == ori_b:
@@ -119,31 +121,36 @@ def compare_positions(paths: list[dict], nodes_datas: list[dict], graphs: list[d
                             name_b, name_a, color='darkorange', label="RI", weight=0.5)
                 b += 1
             elif shifts:
-                if start_a >= start_b and end_a >= end_b:
-                    # Shift of A after B
-                    events["Shift"] += 1
-                    b += 1
-                    if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
-                        combined_view.add_edge(
-                            name_b, name_a, color='darkgreen', label="S", weight=0.5)
-                elif start_a <= start_b and end_a <= end_b:
+                if start_a < start_b and end_a < end_b and end_a != start_b:
                     # Shift of B after A
                     events["Shift"] += 1
                     a += 1
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
                         combined_view.add_edge(
                             name_a, name_b, color='darkgreen', label="S", weight=0.5)
+                elif start_b < start_a and end_b < end_a and end_b != start_a:
+                    # Shift of A after B
+                    events["Shift"] += 1
+                    b += 1
+                    if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                        combined_view.add_edge(
+                            name_b, name_a, color='darkgreen', label="S", weight=0.5)
+                else:
+                    if end_a == start_b:
+                        a += 1
+                    else:
+                        b += 1
     return (events, combined_view)
 
 
-def display_graph(graph: MultiDiGraph, name: str) -> None:
+def display_graph(graph: MultiDiGraph, name: str, paths: list) -> None:
     """Creates a interactive .html file representing the given graph
 
     Args:
         graph (MultiDiGraph): a graph combining multiple pangenomes to highlight thier similarities
     """
     graph_visualizer = Network(
-        height='1000px', width='100%', directed=True)
+        height='1000px', width='100%', directed=True, select_menu=True, filter_menu=True, bgcolor='#ffffff',)
     graph_visualizer.toggle_physics(True)
     graph_visualizer.from_nx(graph)
     graph_visualizer.set_edge_smooth('dynamic')
@@ -152,12 +159,21 @@ def display_graph(graph: MultiDiGraph, name: str) -> None:
     except FileNotFoundError:
         pass
 
+    with open(f"{name}.html", "r", encoding="utf-8") as html_reader:
+        outfile = html_reader.readlines()
+        # <img src='{gfa_file.split('.')[0].split('/')[-1]}_cbar.png' align='center' rotate='90'>
+    outfile[10] = f"<p>Paths alignments : <b>{', '.join(paths)}</b></p>"
+    with open(f"{name}.html", "w", encoding="utf-8") as html_writer:
+        html_writer.writelines(outfile)
+
 
 if __name__ == "__main__":
 
     parser = ArgumentParser(add_help=False)
     parser.add_argument(
         "file", type=str, help="Path(s) to two or more gfa-like file(s).", nargs='+')
+    parser.add_argument("job_name", type=str,
+                        help="Job identifier for output (ex : chr3_graph)")
     parser.add_argument(
         "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
     parser.add_argument('-h', '--help', action='help', default=SUPPRESS,
@@ -175,4 +191,4 @@ if __name__ == "__main__":
 
     for i, (path, nodes, graphs) in enumerate(get_backbone(args.file, args.gfa_version)):
         datas, full_graph = compare_positions(path, nodes, graphs, args.paths)
-        display_graph(full_graph, f"offset_{i}")
+        display_graph(full_graph, f"{args.job_name}_{i}", args.paths)

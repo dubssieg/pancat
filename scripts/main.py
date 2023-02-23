@@ -58,6 +58,12 @@ parser_isolate.add_argument(
     type=int,
     help='To specifiy a end point (in bp) to create a subgraph',
 )
+parser_isolate.add_argument(
+    '-r',
+    '--reference',
+    type=str,
+    help='To specifiy the path to follow',
+)
 
 ## Subparser for offset_in_gfa ##
 
@@ -164,10 +170,14 @@ parser_compare: ArgumentParser = subparsers.add_parser(
 
 parser_compare.add_argument(
     "file", type=str, help="Path(s) to two or more gfa-like file(s).", nargs='+')
+parser_compare.add_argument("job_name", type=str,
+                            help="Job identifier for output (ex : chr3_graph)")
 parser_compare.add_argument(
     "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
 parser_compare.add_argument(
     "-p", "--paths", type=str, help="Path(s) to display.", nargs='+', default=None)
+parser_compare.add_argument(
+    "-s", "--with_sequences", help="Asks to show full sequences in node info.", action='store_true')
 
 
 ## Subparser for gfa_convert ##
@@ -305,7 +315,8 @@ def main() -> None:
         )
         exit()
     if args.subcommands == 'isolate':
-        isolate(args.file, args.out, args.start, args.end, args.gfa_version)
+        isolate(args.file, args.out, args.start, args.end,
+                args.gfa_version, args.reference)
     elif args.subcommands == 'offset':
         add_offsets_to_gfa(args.file, args.out, args.gfa_version)
     elif args.subcommands == 'neighborhood':
@@ -346,11 +357,12 @@ def main() -> None:
             parser.error(
                 "Please match the number of args between files and gfa types.")
 
-        for i, (path, nodes, graphs) in enumerate(get_backbone(args.file, args.gfa_version)):
+        for i, (path, nodes, graphs) in enumerate(get_backbone(args.file, args.gfa_version, args.with_sequences)):
             datas, full_graph = compare_positions(
                 path, nodes, graphs, args.paths)  # type: ignore
             print(datas)
-            compare_display_graph(full_graph, f"offset_{i}")
+            compare_display_graph(
+                full_graph, f"{args.job_name}_{i}", args.paths)
     elif args.subcommands == 'convert':
         rgfa_to_gfa(
             args.file,
