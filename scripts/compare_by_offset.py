@@ -1,5 +1,6 @@
 "Does position-based checks of segment status between graphs, following paths."
 from argparse import ArgumentParser, SUPPRESS
+from os import path, remove, getcwd
 from typing import Generator
 from itertools import combinations
 from networkx import MultiDiGraph, compose_all
@@ -22,6 +23,7 @@ def get_backbone(files: list, versions: list, with_sequences: bool = False) -> G
         node_map: list = list()
         path_map: list = list()
         graph_map: list = list()
+        colors: dict = dict()
         for file, ver in duet:
             graph: Graph = Graph(file, ver, with_sequences)
             node_map.append({node.datas["name"]: node.datas['PO']
@@ -30,8 +32,9 @@ def get_backbone(files: list, versions: list, with_sequences: bool = False) -> G
                 {path.datas["name"]: path.datas["path"] for path in graph.get_path_list()})
             graph_map.append(
                 {(x := file.split('.')[0].split('/')[-1]): graph.compute_networkx(x)})
+            colors: dict = {**graph.colors, **colors}
             del graph
-        yield (path_map, node_map, graph_map)
+        yield (path_map, node_map, graph_map, colors)
 
 
 def compare_positions(paths: list[dict], nodes_datas: list[dict], graphs: list[dict], path_names: list | None = None, shifts: bool = True) -> tuple:
@@ -58,13 +61,14 @@ def compare_positions(paths: list[dict], nodes_datas: list[dict], graphs: list[d
     combined_view: MultiDiGraph = compose_all(
         [g for graph in graphs for _, g in graph.items()])
     events: dict = {
-        "Shift": 0,
-        "Inclusion A -> B": 0,
-        "Inclusion B -> A": 0,
-        "Reverse Inclusion A -> B": 0,
-        "Reverse Inclusion B -> A": 0,
-        "Equivalence": 0,
-        "Reverse Equivalence": 0
+        "Shift A -> B": {'number': 0, 'desc': 'Overlaps between A and B, where suffix of A is prefix of B'},
+        "Shift B -> A": {'number': 0, 'desc': 'Overlaps between B and A, where suffix of B is prefix of A'},
+        "Inclusion A -> B": {'number': 0, 'desc': 'Inclusions between A and B, where A is a subsequence of B'},
+        "Inclusion B -> A": {'number': 0, 'desc': 'Inclusions between B and A, where B is a subsequence of A'},
+        "Reverse Inclusion A -> B": {'number': 0, 'desc': 'Inclusions between A and B, where A is a subsequence of B, and B is reversed.'},
+        "Reverse Inclusion B -> A": {'number': 0, 'desc': 'Inclusions between B and A, where B is a subsequence of A, and B is reversed.'},
+        "Equivalence": {'number': 0, 'desc': 'Equivalences between A and B, where A is equal to B.'},
+        "Reverse Equivalence": {'number': 0, 'desc': 'Equivalences between A and B, where A is equal to B, and B is reversed.'},
     }
     name_graph_a, name_graph_b = list(graphs[0].keys())[
         0], list(graphs[1].keys())[0]
@@ -83,12 +87,12 @@ def compare_positions(paths: list[dict], nodes_datas: list[dict], graphs: list[d
             if start_a == start_b and end_a == end_b:
                 # A & B are the same
                 if ori_a == ori_b:
-                    events["Equivalence"] += 1
+                    events["Equivalence"]['number'] += 1
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
                         combined_view.add_edge(
                             name_a, name_b, color='blueviolet', arrows='', label="E", weight=0.5)
                 else:
-                    events["Reverse Equivalence"] += 1
+                    events["Reverse Equivalence"]['number'] += 1
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
                         combined_view.add_edge(
                             name_a, name_b, color='blueviolet', arrows='', label="RE", weight=0.5)
@@ -97,12 +101,12 @@ def compare_positions(paths: list[dict], nodes_datas: list[dict], graphs: list[d
             elif start_a >= start_b and end_a <= end_b:
                 # Inclusion of A in B
                 if ori_a == ori_b:
-                    events["Inclusion A -> B"] += 1
+                    events["Inclusion A -> B"]['number'] += 1
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
                         combined_view.add_edge(
                             name_a, name_b, color='darkorange', label="I", weight=0.5)
                 else:
-                    events["Reverse Inclusion A -> B"] += 1
+                    events["Reverse Inclusion A -> B"]['number'] += 1
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
                         combined_view.add_edge(
                             name_a, name_b, color='darkorange', label="RI", weight=0.5)
@@ -110,12 +114,12 @@ def compare_positions(paths: list[dict], nodes_datas: list[dict], graphs: list[d
             elif start_b >= start_a and end_b <= end_a:
                 # Inclusion of B in A
                 if ori_a == ori_b:
-                    events["Inclusion B -> A"] += 1
+                    events["Inclusion B -> A"]['number'] += 1
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
                         combined_view.add_edge(
                             name_b, name_a, color='darkorange', label="I", weight=0.5)
                 else:
-                    events["Reverse Inclusion B -> A"] += 1
+                    events["Reverse Inclusion B -> A"]['number'] += 1
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
                         combined_view.add_edge(
                             name_b, name_a, color='darkorange', label="RI", weight=0.5)
@@ -123,14 +127,14 @@ def compare_positions(paths: list[dict], nodes_datas: list[dict], graphs: list[d
             elif shifts:
                 if start_a < start_b and end_a < end_b and end_a != start_b:
                     # Shift of B after A
-                    events["Shift"] += 1
+                    events["Shift A -> B"]['number'] += 1
                     a += 1
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
                         combined_view.add_edge(
                             name_a, name_b, color='darkgreen', label="S", weight=0.5)
                 elif start_b < start_a and end_b < end_a and end_b != start_a:
                     # Shift of A after B
-                    events["Shift"] += 1
+                    events["Shift B -> A"]['number'] += 1
                     b += 1
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
                         combined_view.add_edge(
@@ -143,28 +147,46 @@ def compare_positions(paths: list[dict], nodes_datas: list[dict], graphs: list[d
     return (events, combined_view)
 
 
-def display_graph(graph: MultiDiGraph, name: str, paths: list) -> None:
+def display_graph(graph: MultiDiGraph, name: str, paths: list, datas_events: dict, filenames: list[str], colors_paths: dict[str, str]) -> None:
     """Creates a interactive .html file representing the given graph
 
     Args:
         graph (MultiDiGraph): a graph combining multiple pangenomes to highlight thier similarities
     """
     graph_visualizer = Network(
-        height='1000px', width='100%', directed=True, select_menu=True, filter_menu=True, bgcolor='#ffffff',)
+        height='1000px', width='100%', directed=True, select_menu=False, filter_menu=False, bgcolor='#ffffff')
+    graph_visualizer.set_template_dir(path.dirname(__file__), 'template.html')
     graph_visualizer.toggle_physics(True)
     graph_visualizer.from_nx(graph)
     graph_visualizer.set_edge_smooth('dynamic')
-    try:
-        graph_visualizer.show(f"{name}.html")
-    except FileNotFoundError:
-        pass
-
-    with open(f"{name}.html", "r", encoding="utf-8") as html_reader:
-        outfile = html_reader.readlines()
-        # <img src='{gfa_file.split('.')[0].split('/')[-1]}_cbar.png' align='center' rotate='90'>
-    outfile[10] = f"<p>Paths alignments : <b>{', '.join(paths)}</b></p>"
+    # graph_visualizer.show(f"{name}_tmp.html")
+    html = graph_visualizer.generate_html()
+    with open(f"{name}_tmp.html", "w+", encoding='utf-8') as out:
+        out.write(html)
+    # <img src='{gfa_file.split('.')[0].split('/')[-1]}_cbar.png' align='center' rotate='90'>
+    # with open(f"{name}_tmp.html", "r", encoding="utf-8") as html_reader:
+    sidebar: str = '\n'.join(['<a href=\'#\' title=\''+val['desc']+'\'>'+key +
+                             ' : '+str(val['number'])+'</a>' for key, val in datas_events.items()])
+    legend: str = '\n'.join(
+        [f"<li><span class='{key}'></span> <a href='#'>{key}</a></li>" for key in colors_paths.keys()])
     with open(f"{name}.html", "w", encoding="utf-8") as html_writer:
-        html_writer.writelines(outfile)
+        with open(f"{name}_tmp.html", "r", encoding="utf-8") as html_file:
+            for line in html_file:
+                if "<div class='sidenav'>" in line:
+                    html_writer.write(
+                        f"""{line}
+<a href='#' title='Path(s) used for the comparaison between offsets'>Paths alignments : <b>{', '.join(paths)}</b></a>
+<a href='#' title='First specified graph, considered as the default orientation'>Graph A : {filenames[0].split('/')[-1].split('.')[0]}</a>
+<a href='#' title='Second specified graph, evaluated against the first'>Graph B : {filenames[1].split('/')[-1].split('.')[0]}</a>
+{sidebar}\n<ul class='legend'>{legend}</ul>"""
+                    )
+                elif "/* your colors */" in line:
+                    html_writer.write(''.join(
+                        [".legend ."+key+" { background-color: "+val+"; }" for key, val in colors_paths.items()]))
+                else:
+                    html_writer.write(line)
+    if path.exists(f"{name}_tmp.html"):
+        remove(f"{name}_tmp.html")
 
 
 if __name__ == "__main__":
@@ -172,7 +194,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(add_help=False)
     parser.add_argument(
         "file", type=str, help="Path(s) to two or more gfa-like file(s).", nargs='+')
-    parser.add_argument("job_name", type=str,
+    parser.add_argument("-j", "--job_name", type=str, required=True,
                         help="Job identifier for output (ex : chr3_graph)")
     parser.add_argument(
         "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
@@ -189,6 +211,7 @@ if __name__ == "__main__":
         parser.error(
             "Please match the number of args between files and gfa types.")
 
-    for i, (path, nodes, graphs) in enumerate(get_backbone(args.file, args.gfa_version)):
+    for i, (path, nodes, graphs, colors) in enumerate(get_backbone(args.file, args.gfa_version)):
         datas, full_graph = compare_positions(path, nodes, graphs, args.paths)
-        display_graph(full_graph, f"{args.job_name}_{i}", args.paths)
+        display_graph(full_graph, f"{args.job_name}_{i}", args.paths, datas, [
+                      args.file[i], args.file[i+1]], colors)

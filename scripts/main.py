@@ -170,7 +170,7 @@ parser_compare: ArgumentParser = subparsers.add_parser(
 
 parser_compare.add_argument(
     "file", type=str, help="Path(s) to two or more gfa-like file(s).", nargs='+')
-parser_compare.add_argument("job_name", type=str,
+parser_compare.add_argument("-j", "--job_name", type=str, required=True,
                             help="Job identifier for output (ex : chr3_graph)")
 parser_compare.add_argument(
     "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
@@ -357,12 +357,11 @@ def main() -> None:
             parser.error(
                 "Please match the number of args between files and gfa types.")
 
-        for i, (path, nodes, graphs) in enumerate(get_backbone(args.file, args.gfa_version, args.with_sequences)):
+        for i, (path, nodes, graphs, colors) in enumerate(get_backbone(args.file, args.gfa_version, args.with_sequences)):
             datas, full_graph = compare_positions(
                 path, nodes, graphs, args.paths)  # type: ignore
-            print(datas)
             compare_display_graph(
-                full_graph, f"{args.job_name}_{i}", args.paths)
+                full_graph, f"{args.job_name}_{i}" if i > 0 else f"{args.job_name}", args.paths, datas, [args.file[i], args.file[i+1]], colors)
     elif args.subcommands == 'convert':
         rgfa_to_gfa(
             args.file,

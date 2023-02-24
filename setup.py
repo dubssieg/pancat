@@ -22,6 +22,8 @@ setup(
     author='Tharos',
     author_email='dubois.siegfried@gmail.com',
     packages=find_packages(),
+    package_data={'': ['template.html']},
+    include_package_data=True,
     zip_safe=False,
     license="LICENSE",
     long_description=open("README.md", encoding='utf-8').read(),
