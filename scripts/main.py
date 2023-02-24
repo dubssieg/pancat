@@ -381,7 +381,7 @@ def main() -> None:
         followed_paths: list = node_range(grab_paths(
             args.file, args.gfa_version, args.reference), args.start, args.stop)
 
-        if args.subsplit:
+        if args.split:
             for i, sequence in enumerate(reconstruct(args.file, args.gfa_version, followed_paths)):
                 with open(f"{args.out}_{i}.fasta", "w", encoding="utf-8") as writer:
                     writer.write(
