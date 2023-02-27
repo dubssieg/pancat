@@ -24,7 +24,7 @@ def calculate_sequence_offsets(node_data: list[tuple], walks: list[Record]) -> l
     Returns:
         list[dict]: a mapping {walk:offset_in_walk} for each walk, and for each node
     """
-    offsets: list[int] = [walk.datas['start_offset']
+    offsets: list[int] = [int(walk.datas['start_offset'])
                           if 'start_offset' in walk.datas.keys() else 0 for walk in walks]
     orientations: list[str] = ['' for _ in range(len(walks))]
     sequence_offsets: list[dict] = list()
