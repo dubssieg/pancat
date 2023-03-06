@@ -16,19 +16,25 @@ def nodes_to_keep(list_of_nodes: list[Segment], embed_paths: dict[str, Walk | Pa
         set: all nodes names that participates in the range
     """
     nodes: set = set()
+    node_data: dict = dict()
     for node in list_of_nodes:
         # get nodelist from reference
         if reference in node.datas['PO'].keys():
             if node.datas['PO'][reference][1] >= start_point and node.datas['PO'][reference][0] <= end_point:
                 nodes.add(node.datas["name"])
+                node_data[node.datas["name"]] = node.datas['PO']
     for name, path in embed_paths.items():
         path.datas["path"] = deque(
             path.datas["path"], maxlen=len(path.datas["path"]))
         try:
             while not path.datas["path"][0][0] in nodes:
                 _ = path.datas["path"].popleft()
+            path.datas["start_offset"] = node_data[path.datas["path"]
+                                                   [0][0]][path.datas["name"]][0]
             while not path.datas["path"][-1][0] in nodes:
                 _ = path.datas["path"].pop()
+            path.datas["stop_offset"] = node_data[path.datas["path"]
+                                                  [-1][0]][path.datas["name"]][1]
         except IndexError:
             # No node inside path is in set, removing path
             embed_paths[name] = None  # type: ignore
@@ -64,16 +70,16 @@ def isolate(gfa_graph: str, output: str, start_point: int, end_point: int, gfa_s
                     if GfaStyle(gfa_style) != GfaStyle.RGFA:
                         gfa_writer.write(line)
     new_paths: dict = {
-        name: path.datas['path'] if path is not None else embed_paths[reference_path_name].datas['path'] for name, path in embed_paths.items()}
+        name: [path.datas['path'], path.datas['start_offset'], path.datas['stop_offset']] if path is not None else [embed_paths[reference_path_name].datas['path'], embed_paths[reference_path_name].datas['start_offset'], embed_paths[reference_path_name].datas['stop_offset']] for name, path in embed_paths.items()}
     match GfaStyle(gfa_style):
         case GfaStyle.GFA1:
             with open(output, 'a', encoding='utf-8') as gfa_writer:
                 gfa_writer.writelines(
-                    [f"P\t{key}\t{','.join([node+orientation.value for node,orientation in val])}\t*\n" for key, val in new_paths.items()])
+                    [f"P\t{key}\t{','.join([node+orientation.value for node,orientation in val1])}\t*\n" for key, (val1, _, _) in new_paths.items()])
         case GfaStyle.GFA1_1:
             with open(output, 'a', encoding='utf-8') as gfa_writer:
                 gfa_writer.writelines(
-                    [f"W\t{key}\t{i}\t{key}\t0\t0\t{''.join([orientation.value+node for node,orientation in val]).replace('+', '>').replace('-', '<')}\t*\n" for i, (key, val) in enumerate(new_paths.items())])
+                    [f"W\t{key}\t{i}\t{key}\t{start}\t{stop}\t{''.join([orientation.value+node for node,orientation in path]).replace('+', '>').replace('-', '<')}\t*\n" for i, (key, (path, start, stop)) in enumerate(new_paths.items())])
         case GfaStyle.RGFA:
             pass
         case _:

@@ -18,7 +18,10 @@ from scripts.vcf_on_graph import vcf_heatmap, match_nodes_to_vcf, vcf_parser
 from scripts.reconstruct_sequences import reconstruct, node_range, grab_paths
 from scripts.map_graph_nodes import mapper, dotgrid_plot, show_alignments, exact_mapper, get_lengths
 from scripts.create_vcf import render_vcf, get_graph_structure
+from rich import print
 
+from rich.traceback import install
+install(show_locals=True)
 
 parser: ArgumentParser = ArgumentParser(
     description='GFA manipulation tools.', add_help=True)
@@ -172,6 +175,8 @@ parser_compare.add_argument(
     "file", type=str, help="Path(s) to two or more gfa-like file(s).", nargs='+')
 parser_compare.add_argument("-j", "--job_name", type=str, required=True,
                             help="Job identifier for output (ex : chr3_graph)")
+parser_compare.add_argument("-r", "--reference", type=str, required=True,
+                            help="Path to refer to if position is ambiguous.")
 parser_compare.add_argument(
     "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
 parser_compare.add_argument(
@@ -310,7 +315,7 @@ def main() -> None:
     "Main call for subprograms"
     if len(argv) == 1:
         print(
-            "You need to provide a command and its arguments for the program to work.\n"
+            "[dark_orange]You need to provide a command and its arguments for the program to work.\n"
             "Try to use -h or --help to get list of available commands."
         )
         exit()
@@ -358,8 +363,8 @@ def main() -> None:
                 "Please match the number of args between files and gfa types.")
 
         for i, (path, nodes, graphs, colors) in enumerate(get_backbone(args.file, args.gfa_version, args.with_sequences)):
-            datas, full_graph = compare_positions(
-                path, nodes, graphs, args.paths)  # type: ignore
+            datas, full_graph = compare_positions(f"{args.job_name}_{i}" if i > 0 else f"{args.job_name}",
+                                                  path, nodes, graphs, args.reference, path_names=args.paths, shifts=True)  # type: ignore
             compare_display_graph(
                 full_graph, f"{args.job_name}_{i}" if i > 0 else f"{args.job_name}", args.paths, datas, [args.file[i], args.file[i+1]], colors)
     elif args.subcommands == 'convert':
@@ -391,7 +396,7 @@ def main() -> None:
                 for i, sequence in enumerate(reconstruct(args.file, args.gfa_version, followed_paths)):
                     writer.write(
                         f"> {followed_paths[i].datas['name']}\n{''.join(sequence)}\n")
-    elif args.subcommands == 'reconstruct':
+    elif args.subcommands == 'align':
         fmap = mapper(args.gfa, args.fasta)
         dotgrid_plot(fmap, nodes_to_highlight=args.highlight)
 
@@ -401,5 +406,6 @@ def main() -> None:
         render_vcf(args.output, get_graph_structure(
             args.file, args.gfa_version, args.reference, args.chromosom))
     else:
-        print("Unknown command. Please use the help to see available commands.")
+        print(
+            "[dark_orange]Unknown command. Please use the help to see available commands.")
         exit(1)

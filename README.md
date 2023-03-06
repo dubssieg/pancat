@@ -7,7 +7,7 @@
 Pangenome graphs visualisation (sort of) with interactive html files, and implementations of many scripts for performing various actions on GFA-like graphs.
 
 <p align="center">
-  <img src="toy_examples/graph.png" width="100%" />
+  <img src="toy_examples/graph_2.png" width="100%" />
 </p>
 
 ## Installation
@@ -25,18 +25,18 @@ A conda env is provided in the `env.sh` script.
 This tool is a collection of small scripts. Not every function or script is accessible through the front-end `pangraphs`, but this front-end showcase what the tools can do.
 
 ```text
-usage: pangraphs [-h] {isolate,offset,neighborhood,scaffold,grapher,levenshtein,compare,convert,length,vcfmatch,reconstruct,align} ...
+usage: pangraphs [-h] {isolate,offset,neighborhood,scaffold,grapher,levenshtein,compare,convert,length,vcfmatch,reconstruct,align,vcf} ...
 
 GFA manipulation tools.
 
 Subcommands:
-  {isolate,offset,neighborhood,scaffold,grapher,levenshtein,compare,convert,length,vcfmatch,reconstruct,align}
+  {isolate,offset,neighborhood,scaffold,grapher,levenshtein,compare,convert,length,vcfmatch,reconstruct,align,vcf}
                         Available subcommands
-    isolate             Isolates a subgraph within a graph. Relies on position in base pairs, requires the PO tag (built by pangraphs offset). In order to output a correct graph, you should provide
-                        a graph that has paths or walks to describe nodes chaining, and your range should be valid (meaning, base positions must be in the graph).
-    offset              Add path offsets to a graph Adds a JSON string, PO (Path Offset) positions, relative to paths. Hence, PO:J:{'w1':(334,335,'+'),'w2':(245,247,'-')} tells that the walk/path w1
-                        contains the sequence starting at position 334 and ending at position 335, and the walk/path w2 contains the sequence starting at the offset 245 (ending 247), and that the
-                        sequences are reversed one to each other. Note that any non-referenced walk in this field means that the node is not inside the given walk.
+    isolate             Isolates a subgraph within a graph. Relies on position in base pairs, requires the PO tag (built by pangraphs offset). In order to output a correct graph, you should
+                        provide a graph that has paths or walks to describe nodes chaining, and your range should be valid (meaning, base positions must be in the graph).
+    offset              Add path offsets to a graph Adds a JSON string, PO (Path Offset) positions, relative to paths. Hence, PO:J:{'w1':(334,335,'+'),'w2':(245,247,'-')} tells that the walk/path
+                        w1 contains the sequence starting at position 334 and ending at position 335, and the walk/path w2 contains the sequence starting at the offset 245 (ending 247), and that
+                        the sequences are reversed one to each other. Note that any non-referenced walk in this field means that the node is not inside the given walk.
     neighborhood        Extracts subgraph given a starting node Given a node and a number of neighbors, attempts to extract paths, nodes and edges around the target node. Beware : if you select a
                         node at one of the ends of the graph, you may stuck yourself in a infinite loop.
     scaffold            Cuts fasta file to isolate chromosoms/scaffolds from PAF file. Extracts from a fasta-like file all sequences in a query assembly given a mapping to a reference and an
@@ -48,11 +48,13 @@ Subcommands:
                         information.
     compare             Does position-based checks of segment status between graphs, following paths. For each path, tries to evaluate, based on position, the existence of shifts, inclusions and
                         equivalences between graphs using the same set of coordinates.
-    convert             (Experimental) Attempts to convert rGFA to GFA1. Converts rGFA files issued from minigraph to GFA1 compatible format. It implies to rename nodes and add P-lines if asked for.
-                        As the P-lines could not be precisely defined from the rGFA, and at is does not realign sequences on the graph, any ambiguous path will go through reference sequence.
+    convert             (Experimental) Attempts to convert rGFA to GFA1. Converts rGFA files issued from minigraph to GFA1 compatible format. It implies to rename nodes and add P-lines if asked
+                        for. As the P-lines could not be precisely defined from the rGFA, and at is does not realign sequences on the graph, any ambiguous path will go through reference sequence.
     length              Plot distribution of nodes lengths across graph.
     vcfmatch            Maps variants to graph. Given a VCF file and a GFA graph, evaluates as a heatmap alignement score based on Levenshtein distance.
     reconstruct         Reconstruct linear sequences from a GFA graph. Given a GFA file with paths, reconstruct a linear sequence for each haplotype between two offsets.
     align               Verifies to which sequences are mapped each node of a GFA, and where. Two figures are produced : a dotgrid displaying a haplotype/segment mapping, and a alignment where
                         segments are matched back on the linear genome.
+    vcf                 (Experimental) Aims to extract variants from a GFA graph. Calls bubbles inside the graph and proceeds to check if node is in reference or not. If not, interprets it as a
+                        variant, and seeks a sequence it refers too. Requires PO offset (pangraphs offset) on your GFA input file.
 ```

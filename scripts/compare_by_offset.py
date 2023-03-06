@@ -1,7 +1,7 @@
 "Does position-based checks of segment status between graphs, following paths."
 from argparse import ArgumentParser, SUPPRESS
-from os import path, remove, getcwd
-from typing import Generator
+from os import path, remove
+from typing import Generator, Iterable
 from itertools import combinations
 from networkx import MultiDiGraph, compose_all
 from pyvis.network import Network
@@ -37,7 +37,7 @@ def get_backbone(files: list, versions: list, with_sequences: bool = False) -> G
         yield (path_map, node_map, graph_map, colors)
 
 
-def compare_positions(paths: list[dict], nodes_datas: list[dict], graphs: list[dict], path_names: list | None = None, shifts: bool = True) -> tuple:
+def compare_positions(output_file: str, paths: list[dict], nodes_datas: list[dict], graphs: list[dict], reference: str, path_names: list | None = None, shifts: bool = True) -> tuple:
     """_summary_
 
     Args:
@@ -51,16 +51,23 @@ def compare_positions(paths: list[dict], nodes_datas: list[dict], graphs: list[d
         nodes_datas) == 2 or len(graphs) == 2, "Graph comparaison can only be made 2 at a time"
     path_of_first, path_of_second = paths
     if isinstance(path_names, list):
+        # a path or a list of paths is specified by the user
         path_of_first = {key: [(n, o) for (n, o) in val if n in nodes_datas[0].keys()] for key,
                          val in path_of_first.items() if key in path_names}
         path_of_second = {key: [(n, o) for (n, o) in val if n in nodes_datas[1].keys()] for key,
                           val in path_of_second.items() if key in path_names}
+    else:
+        # no path specified, considering all paths
+        path_of_first = {key: [(n, o) for (n, o) in val if n in nodes_datas[0].keys()] for key,
+                         val in path_of_first.items()}
+        path_of_second = {key: [(n, o) for (n, o) in val if n in nodes_datas[1].keys()] for key,
+                          val in path_of_second.items()}
     assert len(set(path_of_first.keys())-set(path_of_second.keys())
                ) == 0, f"Your graphs does not use the same names for their paths. ({set(path_of_first.keys())-set(path_of_second.keys())} were unique)."
     nodes_of_a, nodes_of_b = nodes_datas
     combined_view: MultiDiGraph = compose_all(
         [g for graph in graphs for _, g in graph.items()])
-    events: dict = {
+    events: dict[str, dict[str, str | int]] = {
         "Shift A -> B": {'number': 0, 'desc': 'Overlaps between A and B, where suffix of A is prefix of B'},
         "Shift B -> A": {'number': 0, 'desc': 'Overlaps between B and A, where suffix of B is prefix of A'},
         "Inclusion A -> B": {'number': 0, 'desc': 'Inclusions between A and B, where A is a subsequence of B'},
@@ -72,78 +79,104 @@ def compare_positions(paths: list[dict], nodes_datas: list[dict], graphs: list[d
     }
     name_graph_a, name_graph_b = list(graphs[0].keys())[
         0], list(graphs[1].keys())[0]
-    for name, path_a in path_of_first.items():
-        path_b = path_of_second[name]
-        a, b = 0, 0
-        while a < len(path_a) and b < len(path_b):
+    with open(f"{output_file}.tsv", 'w', encoding='utf-8') as report:
+        header: str = "PATH\tSOURCE\tSSTART\tSSTOP\tTARGET\tTSTART\tTSTOP\tEVENT\tREVERSED\tAMBIGUOUS\n"
+        report.write(header)
+        for name, path_a in path_of_first.items():
+            path_b = path_of_second[name]
+            a, b = 0, 0
+            while a < len(path_a) and b < len(path_b):
+                try:
+                    start_a, end_a, ori_a = nodes_of_a[path_a[a][0]][name]
+                    start_b, end_b, ori_b = nodes_of_b[path_b[b][0]][name]
+                    ambiguous: bool = False
+                except KeyError:
+                    # Path follows reference (might be ambiguous)
+                    start_a, end_a, ori_a = nodes_of_a[path_a[a][0]][reference]
+                    start_b, end_b, ori_b = nodes_of_b[path_b[b][0]][reference]
+                    ambiguous: bool = True
+                name_a = f"{name_graph_a}_{path_a[a][0]}"
+                name_b = f"{name_graph_b}_{path_b[b][0]}"
 
-            start_a, end_a, ori_a = nodes_of_a[path_a[a][0]][name]
-            start_b, end_b, ori_b = nodes_of_b[path_b[b][0]][name]
-            name_a = f"{name_graph_a}_{path_a[a][0]}"
-            name_b = f"{name_graph_b}_{path_b[b][0]}"
-
-            # print(f'{name_a}: {start_a}/{end_a} ; {name_b}: {start_b}/{end_b}')
-
-            if start_a == start_b and end_a == end_b:
-                # A & B are the same
-                if ori_a == ori_b:
-                    events["Equivalence"]['number'] += 1
-                    if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
-                        combined_view.add_edge(
-                            name_a, name_b, color='blueviolet', arrows='', label="E", weight=0.5)
-                else:
-                    events["Reverse Equivalence"]['number'] += 1
-                    if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
-                        combined_view.add_edge(
-                            name_a, name_b, color='blueviolet', arrows='', label="RE", weight=0.5)
-                a += 1
-                b += 1
-            elif start_a >= start_b and end_a <= end_b:
-                # Inclusion of A in B
-                if ori_a == ori_b:
-                    events["Inclusion A -> B"]['number'] += 1
-                    if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
-                        combined_view.add_edge(
-                            name_a, name_b, color='darkorange', label="I", weight=0.5)
-                else:
-                    events["Reverse Inclusion A -> B"]['number'] += 1
-                    if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
-                        combined_view.add_edge(
-                            name_a, name_b, color='darkorange', label="RI", weight=0.5)
-                a += 1
-            elif start_b >= start_a and end_b <= end_a:
-                # Inclusion of B in A
-                if ori_a == ori_b:
-                    events["Inclusion B -> A"]['number'] += 1
-                    if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
-                        combined_view.add_edge(
-                            name_b, name_a, color='darkorange', label="I", weight=0.5)
-                else:
-                    events["Reverse Inclusion B -> A"]['number'] += 1
-                    if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
-                        combined_view.add_edge(
-                            name_b, name_a, color='darkorange', label="RI", weight=0.5)
-                b += 1
-            elif shifts:
-                if start_a < start_b and end_a < end_b and end_a != start_b:
-                    # Shift of B after A
-                    events["Shift A -> B"]['number'] += 1
-                    a += 1
-                    if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
-                        combined_view.add_edge(
-                            name_a, name_b, color='darkgreen', label="S", weight=0.5)
-                elif start_b < start_a and end_b < end_a and end_b != start_a:
-                    # Shift of A after B
-                    events["Shift B -> A"]['number'] += 1
-                    b += 1
-                    if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
-                        combined_view.add_edge(
-                            name_b, name_a, color='darkgreen', label="S", weight=0.5)
-                else:
-                    if end_a == start_b:
-                        a += 1
+                if start_a == start_b and end_a == end_b:
+                    # A & B are the same
+                    if ori_a == ori_b:
+                        events["Equivalence"]['number'] += 1
+                        if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            combined_view.add_edge(
+                                name_a, name_b, color='blueviolet', arrows='', label="E", weight=0.5)
+                            report.write(
+                                f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tE\t{False}\t{ambiguous}\n")
                     else:
+                        events["Reverse Equivalence"]['number'] += 1
+                        if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            combined_view.add_edge(
+                                name_a, name_b, color='blueviolet', arrows='', label="RE", weight=0.5)
+                            report.write(
+                                f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tE\t{True}\t{ambiguous}\n")
+                    a += 1
+                    b += 1
+                elif start_a >= start_b and end_a <= end_b:
+                    # Inclusion of A in B
+                    if ori_a == ori_b:
+                        events["Inclusion A -> B"]['number'] += 1
+                        if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            combined_view.add_edge(
+                                name_a, name_b, color='darkorange', label="I", weight=0.5)
+                            report.write(
+                                f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tI\t{False}\t{ambiguous}\n")
+                    else:
+                        events["Reverse Inclusion A -> B"]['number'] += 1
+                        if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            combined_view.add_edge(
+                                name_a, name_b, color='darkorange', label="RI", weight=0.5)
+                            report.write(
+                                f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tI\t{True}\t{ambiguous}\n")
+                    a += 1
+                elif start_b >= start_a and end_b <= end_a:
+                    # Inclusion of B in A
+                    if ori_a == ori_b:
+                        events["Inclusion B -> A"]['number'] += 1
+                        if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            combined_view.add_edge(
+                                name_b, name_a, color='darkorange', label="I", weight=0.5)
+                            report.write(
+                                f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tI\t{False}\t{ambiguous}\n")
+                    else:
+                        events["Reverse Inclusion B -> A"]['number'] += 1
+                        if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            combined_view.add_edge(
+                                name_b, name_a, color='darkorange', label="RI", weight=0.5)
+                            report.write(
+                                f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tI\t{True}\t{ambiguous}\n")
+                    b += 1
+                elif shifts:
+                    if start_a < start_b and end_a < end_b and end_a != start_b and start_b < end_a:
+                        # Shift of B after A
+                        events["Shift A -> B"]['number'] += 1
+                        a += 1
+                        if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            combined_view.add_edge(
+                                name_a, name_b, color='darkgreen', label="S", weight=0.5)
+                            report.write(
+                                f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tS\t{False}\t{ambiguous}\n")
+                    elif start_b < start_a and end_b < end_a and end_b != start_a and start_a < end_b:
+                        # Shift of A after B
+                        events["Shift B -> A"]['number'] += 1
                         b += 1
+                        if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            combined_view.add_edge(
+                                name_b, name_a, color='darkgreen', label="S", weight=0.5)
+                            report.write(
+                                f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tS\t{False}\t{ambiguous}\n")
+                    else:
+                        if end_a <= start_b:
+                            # segment is before, or ends at the position of next to compare, we shift the comparison
+                            a += 1
+                        else:
+                            # same, but for b
+                            b += 1
+
     return (events, combined_view)
 
 
@@ -175,7 +208,7 @@ def display_graph(graph: MultiDiGraph, name: str, paths: list, datas_events: dic
                 if "<div class='sidenav'>" in line:
                     html_writer.write(
                         f"""{line}
-<a href='#' title='Path(s) used for the comparaison between offsets'>Paths alignments : <b>{', '.join(paths)}</b></a>
+<a href='#' title='Path(s) used for the comparaison between offsets'>Paths alignments : <b>{', '.join(paths) if isinstance(paths,Iterable) else 'paired mode'}</b></a>
 <a href='#' title='First specified graph, considered as the default orientation'>Graph A : {filenames[0].split('/')[-1].split('.')[0]}</a>
 <a href='#' title='Second specified graph, evaluated against the first'>Graph B : {filenames[1].split('/')[-1].split('.')[0]}</a>
 {sidebar}\n<ul class='legend'>{legend}</ul>"""
@@ -196,6 +229,8 @@ if __name__ == "__main__":
         "file", type=str, help="Path(s) to two or more gfa-like file(s).", nargs='+')
     parser.add_argument("-j", "--job_name", type=str, required=True,
                         help="Job identifier for output (ex : chr3_graph)")
+    parser.add_argument("-r", "--reference", type=str, required=True,
+                        help="Path to refer to if position is ambiguous.")
     parser.add_argument(
         "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
     parser.add_argument('-h', '--help', action='help', default=SUPPRESS,
@@ -212,6 +247,7 @@ if __name__ == "__main__":
             "Please match the number of args between files and gfa types.")
 
     for i, (path, nodes, graphs, colors) in enumerate(get_backbone(args.file, args.gfa_version)):
-        datas, full_graph = compare_positions(path, nodes, graphs, args.paths)
+        datas, full_graph = compare_positions(
+            f"{args.job_name}_{i}", path, nodes, graphs, args.reference, path_names=args.paths, shifts=True)
         display_graph(full_graph, f"{args.job_name}_{i}", args.paths, datas, [
                       args.file[i], args.file[i+1]], colors)

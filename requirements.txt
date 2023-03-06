@@ -12,3 +12,4 @@ BubbleGun
 statsmodels
 resource
 Bio
+rich
