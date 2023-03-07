@@ -119,7 +119,7 @@ def reconstruct(gfa_file: str, gfa_version: str, paths_to_follow: list[Record]) 
         reconstruct_seq: list = ['' for _ in range(len(path_seq))]
         with open(gfa_file, "r", encoding="utf-8") as reader:
             for line in reader:
-                gfa_line: Record = Record(line, gfa_version)
+                gfa_line: Record = Record(line, gfa_version, {'ws': False})
                 if isinstance(gfa_line, Segment):
                     try:
                         idx: int = path_seq.index(
