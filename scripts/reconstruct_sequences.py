@@ -21,7 +21,7 @@ def grab_paths(gfa_file: str, gfa_version: str, reference: str) -> list[Record]:
     version: GfaStyle = GfaStyle(gfa_version)
     with open(gfa_file, "r", encoding="utf-8") as reader:
         for line in reader:
-            gfa_line: Record = Record(line, gfa_version)
+            gfa_line: Record = Record(line, gfa_version, {'ws': False})
             if isinstance(gfa_line, Walk):
                 if not gfa_line.datas['id'] == '_MINIGRAPH_':
                     if gfa_line.datas['id'] == reference:
