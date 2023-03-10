@@ -145,15 +145,15 @@ def compare_positions(
                 if start_a == start_b and end_a == end_b:
                     # A & B are the same
                     if ori_a == ori_b:
-                        events["Equivalence"]['number'] += 1
                         if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            events["Equivalence"]['number'] += 1
                             combined_view.add_edge(
                                 name_a, name_b, color='blueviolet', arrows='', label="E", weight=0.5, title=(score := event_score(Event.EQUIVALENCE, abs(end_a-start_a))))
                             report.write(
                                 f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tE\t{False}\t{score}\t{ambiguous}\n")
                     else:
-                        events["Reverse Equivalence"]['number'] += 1
                         if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            events["Reverse Equivalence"]['number'] += 1
                             combined_view.add_edge(
                                 name_a, name_b, color='blueviolet', arrows='', label="RE", weight=0.5, title=(score := event_score(Event.REVERSE_EQUIVALENCE, abs(end_a-start_a))))
                             report.write(
@@ -163,15 +163,15 @@ def compare_positions(
                 elif start_a >= start_b and end_a <= end_b:
                     # Inclusion of A in B
                     if ori_a == ori_b:
-                        events["Inclusion A -> B"]['number'] += 1
                         if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            events["Inclusion A -> B"]['number'] += 1
                             combined_view.add_edge(
                                 name_a, name_b, color='darkorange', label="I", weight=0.5, title=(score := event_score(Event.INCLUSION, abs(end_a-start_a))))
                             report.write(
                                 f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tI\t{False}\t{score}\t{ambiguous}\n")
                     else:
-                        events["Reverse Inclusion A -> B"]['number'] += 1
                         if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            events["Reverse Inclusion A -> B"]['number'] += 1
                             combined_view.add_edge(
                                 name_a, name_b, color='darkorange', label="RI", weight=0.5, title=(score := event_score(Event.REVERSE_INCLUSION, abs(end_a-start_a))))
                             report.write(
@@ -180,15 +180,15 @@ def compare_positions(
                 elif start_b >= start_a and end_b <= end_a:
                     # Inclusion of B in A
                     if ori_a == ori_b:
-                        events["Inclusion B -> A"]['number'] += 1
                         if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            events["Inclusion B -> A"]['number'] += 1
                             combined_view.add_edge(
                                 name_b, name_a, color='darkorange', label="I", weight=0.5, title=(score := event_score(Event.INCLUSION, abs(end_b-start_b))))
                             report.write(
                                 f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tI\t{False}\t{score}\t{ambiguous}\n")
                     else:
-                        events["Reverse Inclusion B -> A"]['number'] += 1
                         if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                            events["Reverse Inclusion B -> A"]['number'] += 1
                             combined_view.add_edge(
                                 name_b, name_a, color='darkorange', label="RI", weight=0.5, title=(score := event_score(Event.REVERSE_INCLUSION, abs(end_b-start_b))))
                             report.write(
@@ -196,18 +196,18 @@ def compare_positions(
                     b += 1
                 elif start_a < start_b and end_a < end_b and end_a != start_b and start_b < end_a:
                     # Shift of B after A
-                    events["Shift A -> B"]['number'] += 1
                     a += 1
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                        events["Shift A -> B"]['number'] += 1
                         combined_view.add_edge(
                             name_a, name_b, color='darkgreen', label="S", weight=0.5, title=(score := event_score(Event.SHIFT, abs(end_a-start_b))))
                         report.write(
                             f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tS\t{False}\t{score}\t{ambiguous}\n")
                 elif start_b < start_a and end_b < end_a and end_b != start_a and start_a < end_b:
                     # Shift of A after B
-                    events["Shift B -> A"]['number'] += 1
                     b += 1
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
+                        events["Shift B -> A"]['number'] += 1
                         combined_view.add_edge(
                             name_b, name_a, color='darkgreen', label="S", weight=0.5, title=(score := event_score(Event.SHIFT, abs(end_b-start_a))))
                         report.write(
@@ -221,6 +221,7 @@ def compare_positions(
                         # same, but for b
                         b += 1
                 align_score += score
+        report.write(f"Total align score: {align_score}\n")
         for event, data in events.items():
             report.write(f"## {event} = {data['number']} ({data['desc']})\n")
     return (events, combined_view, align_score)
