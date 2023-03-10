@@ -221,7 +221,8 @@ def compare_positions(
                         # same, but for b
                         b += 1
                 align_score += score
-
+        for event, data in events.items():
+            report.write(f"## {event} = {data['number']} ({data['desc']})\n")
     return (events, combined_view, align_score)
 
 
