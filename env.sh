@@ -12,7 +12,7 @@ conda create -p $WD"/.env" python=3.10
 conda activate $WD"/.env"
 
 # installing required python packages
-python -m pip install -r requirements.txt
+python setup.py install
 
 unset CONDA_ALWAYS_YES
 conda deactivate

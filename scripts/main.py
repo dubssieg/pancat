@@ -183,6 +183,8 @@ parser_compare.add_argument(
     "-p", "--paths", type=str, help="Path(s) to display.", nargs='+', default=None)
 parser_compare.add_argument(
     "-s", "--with_sequences", help="Asks to show full sequences in node info.", action='store_true')
+parser_compare.add_argument(
+    "-n", "--no_html", help="Asks to skip html graph creation", action='store_true')
 
 
 ## Subparser for gfa_convert ##
@@ -363,10 +365,11 @@ def main() -> None:
                 "Please match the number of args between files and gfa types.")
 
         for i, (path, nodes, graphs, colors) in enumerate(get_backbone(args.file, args.gfa_version, args.with_sequences)):
-            datas, full_graph = compare_positions(f"{args.job_name}_{i}" if i > 0 else f"{args.job_name}",
-                                                  path, nodes, graphs, args.reference, path_names=args.paths, shifts=True)  # type: ignore
-            compare_display_graph(
-                full_graph, f"{args.job_name}_{i}" if i > 0 else f"{args.job_name}", args.paths, datas, [args.file[i], args.file[i+1]], colors)
+            datas, full_graph, score = compare_positions(f"{args.job_name}_{i}" if i > 0 else f"{args.job_name}",
+                                                         path, nodes, graphs, args.reference, path_names=args.paths, shifts=True)  # type: ignore
+            if not args.no_html:
+                compare_display_graph(
+                    full_graph, f"{args.job_name}_{i}" if i > 0 else f"{args.job_name}", args.paths, datas, [args.file[i], args.file[i+1]], colors, score)
     elif args.subcommands == 'convert':
         rgfa_to_gfa(
             args.file,
