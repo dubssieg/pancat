@@ -11,7 +11,7 @@ from scripts.paths_bubblegun_bfs import bfs_step, paths_step
 from scripts.parse_genomes import isolate_scaffolds
 from scripts.grapher import html_graph
 from scripts.levenshtein_distance import show_identity, display_graph
-from scripts.compare_by_offset import display_graph as compare_display_graph, get_backbone, compare_positions
+from scripts.compare_by_offset import display_graph as compare_display_graph, get_backbone, compare_positions, extract_components
 from scripts.gfa_convert import rgfa_to_gfa
 from scripts.length_ratios import parse_gfa, plot_ratio
 from scripts.vcf_on_graph import vcf_heatmap, match_nodes_to_vcf, vcf_parser
@@ -185,6 +185,8 @@ parser_compare.add_argument(
     "-s", "--with_sequences", help="Asks to show full sequences in node info.", action='store_true')
 parser_compare.add_argument(
     "-n", "--no_html", help="Asks to skip html graph creation", action='store_true')
+parser_compare.add_argument(
+    "-e", "--extracted", help="Asks for extracted html creation", action="store_true")
 
 
 ## Subparser for gfa_convert ##
@@ -365,11 +367,16 @@ def main() -> None:
                 "Please match the number of args between files and gfa types.")
 
         for i, (path, nodes, graphs, colors) in enumerate(get_backbone(args.file, args.gfa_version, args.with_sequences)):
-            datas, full_graph, score = compare_positions(f"{args.job_name}_{i}" if i > 0 else f"{args.job_name}",
-                                                         path, nodes, graphs, args.reference, path_names=args.paths, shifts=True)  # type: ignore
+            datas, full_graph, score, equivalence_list = compare_positions(f"{args.job_name}_{i}" if i > 0 else f"{args.job_name}",
+                                                                           path, nodes, graphs, args.reference, path_names=args.paths)  # type: ignore
             if not args.no_html:
                 compare_display_graph(
                     full_graph, f"{args.job_name}_{i}" if i > 0 else f"{args.job_name}", args.paths, datas, [args.file[i], args.file[i+1]], colors, score)
+            if args.extracted:
+                purged_graph: MultiDiGraph = extract_components(
+                    full_graph, equivalence_list)
+                compare_display_graph(purged_graph, f"{args.job_name}_{i}_extracted", args.paths, datas, [
+                    args.file[i], args.file[i+1]], colors, score)
     elif args.subcommands == 'convert':
         rgfa_to_gfa(
             args.file,
