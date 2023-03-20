@@ -377,6 +377,7 @@ def main() -> None:
                     full_graph, equivalence_list)
                 compare_display_graph(purged_graph, f"{args.job_name}_{i}_extracted", args.paths, datas, [
                     args.file[i], args.file[i+1]], colors, score)
+
     elif args.subcommands == 'convert':
         rgfa_to_gfa(
             args.file,
