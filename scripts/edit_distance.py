@@ -2,59 +2,64 @@
 from itertools import combinations, accumulate
 from argparse import ArgumentParser, SUPPRESS
 from indexed import IndexedOrderedDict
-from rich import print
 from gfagraphs import Graph
 from tharospytools import revcomp
 
 
-class NoEdit():
+class EditEvent():
+    "Modelizes a elementary operation between a couple of nodes"
 
-    def __init__(self, seq_a: str, seq_b: str) -> None:
+    def __init__(self, seq_a: str, seq_b: str, offset: int, start: int, end: int) -> None:
+        """_summary_
+
+        Args:
+            seq_a (str): sequence of reference
+            seq_b (str): sequence of query
+            offset (int): the offset inside the query sequence
+            start (int): the start position inside the segment (0=first base)
+            end (int): the end position inside the segment
+        """
+        self.event = type(self).__name__
         self.revcomp: bool = revcomp(seq_b) == seq_a
+        self.positions: tuple = (start, end)
+        self.offsets: tuple = (offset, offset+(end-start))
 
-    # TODO nécessité d'un autre critère ?
+    def __str__(self) -> str:
+        return f"{self.event}(revcomp={self.revcomp}, positions={self.positions})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
     def __eq__(self, __o: object) -> bool:
-        return isinstance(__o, NoEdit)
+        return isinstance(__o, type(self)) and self.positions == __o.positions and self.revcomp == __o.revcomp
 
 
-class Prefix():
+class String(EditEvent):
+    "Situation of two equal nodes"
+
+
+class Overlap_Prefix_Prefix(EditEvent):
+    "Particular kind of inclusion"
+
+
+class Overlap_Suffix_Suffix(EditEvent):
+    "Particular case of inclusion"
+
+
+class Overlap_Prefix_Suffix(EditEvent):
     "Prefix/Suffix means edit = Split"
-    pass
-
-    # TODO typechecks plus profonds avec les positions pour vérifier qu'elles sont identiques
-    def __eq__(self, __o: object) -> bool:
-        return isinstance(__o, Prefix)
 
 
-class Suffix():
-    pass
-
-    # TODO typechecks plus profonds avec les positions pour vérifier qu'elles sont identiques
-    def __eq__(self, __o: object) -> bool:
-        return isinstance(__o, Suffix)
+class Overlap_Suffix_Prefix(EditEvent):
+    "Prefix/suffix means edit = split"
 
 
-class Affix():
+class Substring(EditEvent):
     "Affix succession means that edit = merge"
-    pass
-
-    # TODO typechecks plus profonds avec les positions pour vérifier qu'elles sont identiques
-    def __eq__(self, __o: object) -> bool:
-        return isinstance(__o, Affix)
 
 
-class Subfix():
+class Superstring(EditEvent):
     "Cut on both ends"
-
-    def __init__(self, seq_a: str, seq_b: str, pos_a: int, pos_b: int) -> None:
-        self.revcomp: bool = revcomp(seq_b) == seq_a
-        self.positions: tuple = (pos_a, pos_b)
-
-    # TODO revoir le système de positions
-    def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, Subfix):
-            return self.positions == __o.positions
-        return False
 
 
 class PathEdit:
@@ -66,7 +71,7 @@ class PathEdit:
         Args:
             path_name (str): a user-friendly name for the PathEdit object (eg. name of the haplotype)
             path_a (IndexedOrderedDict): a dict mapping node names to sequences for the first path
-                /!\ (keys:values) pairs MUST BE ORDERED as they are traversed by the path!
+                ! (keys:values) pairs MUST BE ORDERED as they are traversed by the path!
             path_b (IndexedOrderedDict): same format, path we compare the first one to
 
         Raises:
@@ -126,30 +131,46 @@ class PathEdit:
                     # Segments are the same
                     # No edition to be made, its an equivalence
                     # (Its also a specific case of inclusion)
-                    edit_list.append(NoEdit(seq_reference, seq_query))
+                    edit_list.append(
+                        String(seq_reference, seq_query, offset_query, 0, query_end-query_start))
                     offset_reference += reference_end - reference_start
                     offset_query += query_end - query_start
 
                 elif reference_start > query_start and reference_end < query_end:
                     # Reference is a subpart of other node
-                    edit_list.append(Subfix(
-                        seq_reference, seq_query, offset_query, offset_query+reference_end - reference_start))
+                    edit_list.append(Superstring(
+                        seq_reference, seq_query, offset_query, reference_start - query_start, reference_end - reference_start))
                     offset_reference += reference_end - reference_start
                     offset_query += reference_end - reference_start
 
-                elif reference_start <= query_start and reference_end >= query_end:
+                elif reference_start < query_start and reference_end > query_end:
                     # Other node is included in reference
-                    edit_list.append(Affix())
+                    edit_list.append(
+                        Substring(seq_reference, seq_query, offset_query, 0, query_end-query_start))
+                    offset_reference += query_end - query_start
+                    offset_query += query_end - query_start
+
+                elif reference_start == query_start and reference_end > query_end:
+                    edit_list.append(
+                        Overlap_Prefix_Prefix(seq_reference, seq_query, offset_query, 0, query_end-query_start))
+                    offset_reference += query_end - query_start
+                    offset_query += query_end - query_start
+
+                elif reference_start < query_start and reference_end == query_end:
+                    edit_list.append(
+                        Overlap_Suffix_Suffix(seq_reference, seq_query, offset_query, 0, query_end-query_start))
                     offset_reference += query_end - query_start
                     offset_query += query_end - query_start
 
                 elif reference_start < query_start and reference_end < query_end:
-                    edit_list.append(Prefix())
+                    edit_list.append(
+                        Overlap_Prefix_Suffix(seq_reference, seq_query, offset_query, 0, reference_end-query_start))
                     offset_reference += reference_end - query_start
                     offset_query += reference_end - query_start
 
                 else:
-                    edit_list.append(Suffix())
+                    edit_list.append(Overlap_Suffix_Prefix(
+                        seq_reference, seq_query, offset_query, reference_start-offset_query, query_end-query_start))
                     offset_reference += query_end - reference_start
                     offset_query += query_end - reference_start
 
@@ -164,8 +185,8 @@ class PathEdit:
             edit_list: list = list()
 
 
-def evaluate_consensus(*paths: PathEdit) -> bool:
-    """Given a series of PathEdit, evaluates if they are equal. 
+def evaluate_consensus(*paths_editions: PathEdit) -> bool:
+    """Given a series of PathEdit, evaluates if they are equal.
 
     Args:
         paths (PathEdit): any number of PathEdit objects
@@ -173,12 +194,39 @@ def evaluate_consensus(*paths: PathEdit) -> bool:
     Returns:
         bool: if paths edits are non ambiguous
     """
-    for path_A, path_B in combinations(paths, 2):
+    for path_A, path_B in combinations(paths_editions, 2):
         shared_nodes = set(path_A.edition.keys()).intersection(
             set(path_B.edition.keys()))
         if not (path_A.can_be_aligned and path_B.can_be_aligned and all([path_A.edition[x] == path_B.edition[x] for x in shared_nodes])):
             return False
     return True
+
+################################################ EDIT ######################################
+
+
+class Edition():
+    pass
+
+
+class Merge(Edition):
+    "This operation means all its child elements must be merged, left to right"
+
+    def __init__(self, *edit_events: Edition) -> None:
+        self.events: list = list(edit_events)
+
+    def __str__(self) -> str:
+        return f"{type(self).__name__}({', '.join(self.events)})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
+class Split(Edition):
+    "This operation means a node should be splitted in two"
+
+
+class Keep(Edition):
+    "This operation means that all child elements must not be changed"
 
 
 if __name__ == "__main__":
@@ -205,8 +253,8 @@ if __name__ == "__main__":
         graph1: Graph = Graph(f1, v1, True)
         graph2: Graph = Graph(f2, v2, True)
 
-        paths = set([path.datas['name'] for path in graph1.get_path_list()]).intersection(
-            set([path.datas['name'] for path in graph2.get_path_list()]))
+        paths = set(path.datas['name'] for path in graph1.get_path_list()).intersection(
+            set(path.datas['name'] for path in graph2.get_path_list()))
 
         for path in paths:
             path_in_g1 = graph1.get_path(path)
@@ -227,7 +275,7 @@ if __name__ == "__main__":
         with open("out.log", "w", encoding='utf-8') as output:
             for dipath in all_dipaths:
                 for key, value in dipath.edition.items():
-                    if not isinstance(value[0], NoEdit):
+                    if not isinstance(value[0], String):
                         output.write(
                             f"{dipath.alignment_name}\t{key}\t{value}\n")
 
