@@ -9,7 +9,7 @@ from tharospytools import revcomp
 class EditEvent():
     "Modelizes a elementary operation between a couple of nodes"
 
-    def __init__(self, seq_a: str, seq_b: str, offset: int, start: int, end: int) -> None:
+    def __init__(self, target_name: str, seq_a: str, seq_b: str, offset: int, start: int, end: int) -> None:
         """_summary_
 
         Args:
@@ -19,6 +19,7 @@ class EditEvent():
             start (int): the start position inside the segment (0=first base)
             end (int): the end position inside the segment
         """
+        self.target_node = target_name
         self.event = type(self).__name__
         self.revcomp: bool = revcomp(seq_b) == seq_a
         self.positions: tuple = (start, end)
@@ -132,45 +133,45 @@ class PathEdit:
                     # No edition to be made, its an equivalence
                     # (Its also a specific case of inclusion)
                     edit_list.append(
-                        String(seq_reference, seq_query, offset_query, 0, query_end-query_start))
+                        String(self.query_path.keys()[idx_query], seq_reference, seq_query, offset_query, 0, query_end-query_start))
                     offset_reference += reference_end - reference_start
                     offset_query += query_end - query_start
 
                 elif reference_start > query_start and reference_end < query_end:
                     # Reference is a subpart of other node
-                    edit_list.append(Superstring(
-                        seq_reference, seq_query, offset_query, reference_start - query_start, reference_end - reference_start))
+                    edit_list.append(Superstring(self.query_path.keys()[idx_query],
+                                                 seq_reference, seq_query, offset_query, reference_start - query_start, reference_end - reference_start))
                     offset_reference += reference_end - reference_start
                     offset_query += reference_end - reference_start
 
                 elif reference_start < query_start and reference_end > query_end:
                     # Other node is included in reference
                     edit_list.append(
-                        Substring(seq_reference, seq_query, offset_query, 0, query_end-query_start))
+                        Substring(self.query_path.keys()[idx_query], seq_reference, seq_query, offset_query, 0, query_end-query_start))
                     offset_reference += query_end - query_start
                     offset_query += query_end - query_start
 
                 elif reference_start == query_start and reference_end > query_end:
                     edit_list.append(
-                        Overlap_Prefix_Prefix(seq_reference, seq_query, offset_query, 0, query_end-query_start))
+                        Overlap_Prefix_Prefix(self.query_path.keys()[idx_query], seq_reference, seq_query, offset_query, 0, query_end-query_start))
                     offset_reference += query_end - query_start
                     offset_query += query_end - query_start
 
                 elif reference_start < query_start and reference_end == query_end:
                     edit_list.append(
-                        Overlap_Suffix_Suffix(seq_reference, seq_query, offset_query, 0, query_end-query_start))
+                        Overlap_Suffix_Suffix(self.query_path.keys()[idx_query], seq_reference, seq_query, offset_query, 0, query_end-query_start))
                     offset_reference += query_end - query_start
                     offset_query += query_end - query_start
 
                 elif reference_start < query_start and reference_end < query_end:
                     edit_list.append(
-                        Overlap_Prefix_Suffix(seq_reference, seq_query, offset_query, 0, reference_end-query_start))
+                        Overlap_Prefix_Suffix(self.query_path.keys()[idx_query], seq_reference, seq_query, offset_query, 0, reference_end-query_start))
                     offset_reference += reference_end - query_start
                     offset_query += reference_end - query_start
 
                 else:
-                    edit_list.append(Overlap_Suffix_Prefix(
-                        seq_reference, seq_query, offset_query, reference_start-offset_query, query_end-query_start))
+                    edit_list.append(Overlap_Suffix_Prefix(self.query_path.keys()[idx_query],
+                                                           seq_reference, seq_query, offset_query, reference_start-offset_query, query_end-query_start))
                     offset_reference += query_end - reference_start
                     offset_query += query_end - reference_start
 
@@ -185,7 +186,7 @@ class PathEdit:
             edit_list: list = list()
 
 
-def evaluate_consensus(*paths_editions: PathEdit) -> bool:
+def evaluate_consensus(*paths_editions: PathEdit) -> dict:
     """Given a series of PathEdit, evaluates if they are equal.
 
     Args:
@@ -194,39 +195,50 @@ def evaluate_consensus(*paths_editions: PathEdit) -> bool:
     Returns:
         bool: if paths edits are non ambiguous
     """
-    for path_A, path_B in combinations(paths_editions, 2):
+    for path_A, path_B in list(combinations(paths_editions, 2)):
         shared_nodes = set(path_A.edition.keys()).intersection(
             set(path_B.edition.keys()))
         if not (path_A.can_be_aligned and path_B.can_be_aligned and all([path_A.edition[x] == path_B.edition[x] for x in shared_nodes])):
-            return False
-    return True
+            raise ValueError("No consensus could be made between paths.")
+    all_edits: dict = dict()
+    for pe in paths_editions:
+        all_edits.update(pe.edition)
+    return all_edits
 
 ################################################ EDIT ######################################
 
 
-class Edition():
-    pass
+def edit_graph(graph_to_edit: Graph, edition_to_perform: dict) -> Graph:
+    """Given a graph and the consensus of a multipath edit, performs the required edition
 
+    Args:
+        graph_to_edit (Graph): a graph to be edited
+        edition_to_perform (dict): a series of events to compute on the graph
 
-class Merge(Edition):
-    "This operation means all its child elements must be merged, left to right"
+    Returns:
+        Graph: the modified graph object
+    """
+    query: dict = {}
+    for edition in edition_to_perform.values():
+        edited_node: str = edition.target_node
+        if edited_node in query:
+            query[edited_node].append(edition)
+        else:
+            query[edited_node] = [edition]
+    for target, commands in query.items():
+        if len(commands) == 1 and isinstance(commands[0], String):
+            # No edition, pass.
+            pass
+        elif len(commands) > 1:
+            # Merging time !
+            graph_to_edit.merge_segments()
+        else:
+            # Splitting time !
+            graph_to_edit.split_segments()
 
-    def __init__(self, *edit_events: Edition) -> None:
-        self.events: list = list(edit_events)
-
-    def __str__(self) -> str:
-        return f"{type(self).__name__}({', '.join(self.events)})"
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
-
-class Split(Edition):
-    "This operation means a node should be splitted in two"
-
-
-class Keep(Edition):
-    "This operation means that all child elements must not be changed"
+    # TODO gérer le problème des interactions des merge et des splits entre eux.
+    # Est-ce que considérer la situation juste en vue query permet de solutionner le pb ?
+    return graph_to_edit
 
 
 if __name__ == "__main__":
@@ -270,6 +282,9 @@ if __name__ == "__main__":
                 pog2[node] = graph2.get_segment(node).datas['seq']
 
             all_dipaths.append(PathEdit(path, pog1, pog2))
+
+            graph1.save_graph(
+                "/udd/sidubois/Documents/Code/data/toy_examples/toy_saved.gfa")
 
         del graph1, graph2
         with open("out.log", "w", encoding='utf-8') as output:
