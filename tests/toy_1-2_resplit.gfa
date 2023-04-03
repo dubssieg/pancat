@@ -1,0 +1,12 @@
+H	VN:Z:1.1	RS:Z:heifer_diploid
+S	3	C	SN:Z:heifer_diploid#heifer_diploid	SO:i:5	SR:i:0
+S	4	CCTTCA	SN:Z:heifer_diploid#heifer_diploid	SO:i:5	SR:i:0
+S	1	ATC	
+S	2	CG	
+L	2	+	3	+	0M
+L	2	+	4	+	0M
+L	3	+	4	+	0M
+L	1	+	2	+	
+W	heifer_diploid	0	heifer_diploid	0	11	>1>2>4	*
+W	heifer_hap1	1	heifer_hap1	0	12	>1>2>3>4	*
+W	heifer_hap2	2	heifer_hap2	0	11	>1>2>4	*

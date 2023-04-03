@@ -18,6 +18,7 @@ from scripts.vcf_on_graph import vcf_heatmap, match_nodes_to_vcf, vcf_parser
 from scripts.reconstruct_sequences import reconstruct, node_range, grab_paths
 from scripts.map_graph_nodes import mapper, dotgrid_plot, show_alignments, exact_mapper, get_lengths
 from scripts.create_vcf import render_vcf, get_graph_structure
+from scripts.edit_distance import perform_edition
 from rich import print
 
 from rich.traceback import install
@@ -309,6 +310,20 @@ parser_vcf.add_argument(
 parser_vcf.add_argument(
     "-r", "--reference", help="Name of the reference path inside graph", required=True, type=str)
 
+## Subparser for edit_distance ##
+
+parser_edit: ArgumentParser = subparsers.add_parser(
+    'edit', help="Aligns graphs and tires to compute the minimal set of events that explains how we go from one graph to another.")
+
+parser_edit.add_argument(
+    "file", type=str, help="Path(s) to two or more gfa-like file(s).", nargs='+')
+parser_edit.add_argument(
+    "-o", "--output_folder", required=True, type=str, help="Path to a folder for results.")
+parser_edit.add_argument(
+    "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
+parser_edit.add_argument(
+    "-p", "--perform_edition", help="Asks to perform edition on graph and outputs it.", action='store_true')
+
 
 #######################################
 
@@ -416,6 +431,9 @@ def main() -> None:
     elif args.subcommands == 'vcf':
         render_vcf(args.output, get_graph_structure(
             args.file, args.gfa_version, args.reference, args.chromosom))
+    elif args.subcommands == 'edit':
+        perform_edition(args.file, args.gfa_version,
+                        args.output_folder, args.perform_edition)
     else:
         print(
             "[dark_orange]Unknown command. Please use the help to see available commands.")
