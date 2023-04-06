@@ -1,13 +1,42 @@
 "Modelizes edition between paths and computes if edition is acceptable inside a graph"
 from itertools import combinations, accumulate, chain
 from argparse import ArgumentParser, SUPPRESS
-from os import path
+from os import path, remove
 from pathlib import Path
 from copy import deepcopy
 from indexed import IndexedOrderedDict
 from rich import print
+from pyvis.network import Network
+from networkx import MultiDiGraph
 from gfagraphs import Graph
 from tharospytools import revcomp
+
+
+def display_graph(graph: MultiDiGraph, name: str, colors_paths: dict[str, str]) -> None:
+    """Creates a interactive .html file representing the given graph
+
+    Args:
+        graph (MultiDiGraph): a graph combining multiple pangenomes to highlight thier similarities
+    """
+    graph_visualizer = Network(
+        height='1000px', width='100%', directed=True, select_menu=False, filter_menu=False, bgcolor='#ffffff')
+    graph_visualizer.set_template_dir(path.dirname(__file__), 'template.html')
+    graph_visualizer.toggle_physics(True)
+    graph_visualizer.from_nx(graph)
+    graph_visualizer.set_edge_smooth('dynamic')
+    html = graph_visualizer.generate_html()
+    with open(f"{name}_tmp.html", "w+", encoding='utf-8') as out:
+        out.write(html)
+    with open(f"{name}.html", "w", encoding="utf-8") as html_writer:
+        with open(f"{name}_tmp.html", "r", encoding="utf-8") as html_file:
+            for line in html_file:
+                if "/* your colors */" in line:
+                    html_writer.write(''.join(
+                        [".legend ."+key+" { background-color: "+val+"; }" for key, val in colors_paths.items()]))
+                else:
+                    html_writer.write(line)
+    if path.exists(f"{name}_tmp.html"):
+        remove(f"{name}_tmp.html")
 
 
 class EditEvent():
@@ -56,7 +85,7 @@ class EditEvent():
         Returns:
             str: a description of the EditEvent
         """
-        return f"{self.event}(revcomp={self.revcomp}, positions={self.offsets_target}, refnode={self.reference_node}, qnode={self.target_node})"
+        return f"{self.event}()"  # (revcomp={self.revcomp}, positions={self.offsets_target}, refnode={self.reference_node}, qnode={self.target_node})
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -148,7 +177,7 @@ class PathEdit:
         query_endpos: list = [0] + \
             list(accumulate(len(x) for x in self.query_path.values()))
 
-        print(f"\n\n\t\t>>>{self.alignment_name}<<<\n\n")
+        # print(f"\n\n\t\t>>>{self.alignment_name}<<<\n\n")
 
         while idx_reference < len(self.reference_path):
             # Current targeted nodes
@@ -353,8 +382,7 @@ class PathEdit:
                 if offset_reference >= reference_endpos[idx_reference+1]:
                     idx_reference += 1
 
-                print(
-                    f"IdxRef={idx_reference}, Oref={offset_reference} || IdxQry={idx_query}, Oqry={offset_query}")
+                # print(f"IdxRef={idx_reference}, Oref={offset_reference} || IdxQry={idx_query}, Oqry={offset_query}")
 
             self.edition[self.reference_path.keys()[current_pos]] = edit_list
             print(edit_list)
@@ -375,17 +403,180 @@ def evaluate_consensus(*paths_editions: PathEdit) -> dict:
             set(path_B.edition.keys()))
         if not (path_A.can_be_aligned and path_B.can_be_aligned and all([path_A.edition[x] == path_B.edition[x] for x in shared_nodes])):
             raise ValueError("No consensus could be made between paths.")
-    all_edits: dict = dict()
+    all_edits: IndexedOrderedDict = IndexedOrderedDict()
     for pe in paths_editions:
         all_edits.update(pe.edition)
     return all_edits
 
-################################################ EDIT ######################################
+
+def copy_paths(in_graph: Graph, out_graph: Graph) -> None:
+    """Copy paths from one graph to another
+
+    Args:
+        in_graph (Graph): _description_
+        out_graph (Graph): _description_
+    """
+    out_graph.walks = deepcopy(in_graph.walks)
+    out_graph.paths = deepcopy(in_graph.paths)
+
+
+def edit_by_paths(
+        graph_to_edit: Graph,
+        edit_on_paths: list[PathEdit]
+) -> Graph:
+    """Path-aware edition. Limits collision between successive edits on multiple paths.
+
+    Args:
+        graph_to_edit (Graph): _description_
+        edit_on_paths (list[PathEdit]): _description_
+
+    Returns:
+        Graph: _description_
+    """
+    graph_to_edit.graph = MultiDiGraph()
+    tpg = graph_to_edit.compute_networkx()
+    display_graph(tpg, "input", graph_to_edit.colors)
+
+    full_graph: Graph = Graph()
+
+    graph_path: dict[str, Graph] = {
+        edit.alignment_name: Graph() for edit in edit_on_paths}
+
+    # We iterate on each path
+    for pathedit in edit_on_paths:
+        # Init values for alignment edition
+        alignment: str = pathedit.alignment_name
+        print(f"\n\n>>>>> {alignment} <<<<<\n\n")
+        # We copy the path we want to follow
+        graph_path[alignment].walks = [
+            deepcopy(w) for w in graph_to_edit.walks if w.datas['name'] == pathedit.alignment_name]
+        graph_path[alignment].paths = [
+            deepcopy(p) for p in graph_to_edit.paths if p.datas['name'] == pathedit.alignment_name]
+
+        ################# PERFORMING EDITION #################
+        mapping: dict = {}
+        negative_edits: int = 0
+        # We iterate over nodes. If we have to split, we split only in two, with the name being 'temp',<original_node_name>
+        for nedit, qedit in pathedit.edition.items():
+            print(f"{nedit} |-> {qedit}")
+
+            # Deepcopy to block edits from propagating
+            graph_path[alignment].segments += deepcopy(
+                [graph_to_edit.get_segment(segname.target_node) for segname in qedit if segname.target_node not in [s.datas['name'] for s in graph_path[alignment].segments]])
+
+            for edition_event in qedit:
+                if type(edition_event) in [SuperPrefix, OverlapPrefixSuffix, SuperString]:
+                    negative_edits -= 1
+                    if type(edition_event) in [OverlapPrefixSuffix, SuperString]:
+                        nodes_names: list = [
+                            f'{negative_edits}', edition_event.target_node]
+                    else:
+                        nodes_names: list = [
+                            f'{negative_edits}', edition_event.target_node][::-1]
+                    # Left border of node
+                    future_split = graph_to_edit.get_segment(
+                        edition_event.target_node)
+                    graph_path[alignment].split_segments(
+                        edition_event.target_node,
+                        nodes_names,
+                        splits := [
+                            (
+                                0,
+                                min(edition_event.length,
+                                    edition_event.length_alt)
+                            ),
+                            (
+                                # edition_event.positions_target[1],
+                                min(edition_event.length,
+                                    edition_event.length_alt),
+                                future_split.datas['length']
+                            )
+                        ]
+                    )
+                    print(
+                        f"Splitting {edition_event.target_node} at {splits} for resp. {nodes_names}")
+
+                    edition_event.target_node = f'{negative_edits}'
+                    # print(vars(edition_event))
+                    print(''.join([f"{'>'.join(graph_path[alignment].get_segment(x).datas['seq'] if x in [s.datas['name'] for s in graph_path[alignment].segments] else '?' for (x,_) in p.datas['path'])}\n{'>'.join(x for (x,_) in p.datas['path'])}" for p in graph_path[alignment].get_path_list()]))
+                    print(
+                        [f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
+        # Estimating targets
+        targets_of_target: dict = {}
+        cumulative_len: int = 0
+        for nedit, qedit in pathedit.edition.items():
+            number_of_edits = len(qedit)
+            names_in_path: list = [
+                x for p in graph_path[alignment].get_path_list() for (x, _) in p.datas['path']]
+            targets_of_target[nedit] = names_in_path[cumulative_len:cumulative_len+number_of_edits]
+            cumulative_len += number_of_edits
+        print(targets_of_target)
+
+        for nedit, targets in targets_of_target.items():
+            if len(targets) > 1:
+                # We merge only if we have multiple nodes to consider
+                # print(f"Nodes in output graph : {[n.datas['name'] for n in output_graph.segments]}")
+                print(f"Merging {targets} in r{nedit}")
+                graph_path[alignment].merge_segments(
+                    *targets, merge_name=f"r{nedit}")
+                print(''.join([f"{'>'.join(graph_path[alignment].get_segment(x).datas['seq'] if x in [s.datas['name'] for s in graph_path[alignment].segments] else '?' for (x,_) in p.datas['path'])}\n{'>'.join(x for (x,_) in p.datas['path'])}" for p in graph_path[alignment].get_path_list()]))
+                print(
+                    [f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
+                mapping[f"r{nedit}"] = nedit
+            else:
+                if not '-' in targets[0]:
+                    print(f"Renaming {targets[0]} in r{targets[0]}")
+                    graph_path[alignment].rename_node(
+                        targets[0], f"r{targets[0]}")
+                    print(''.join([f"{'>'.join(graph_path[alignment].get_segment(x).datas['seq'] if x in [s.datas['name'] for s in graph_path[alignment].segments] else '?' for (x,_) in p.datas['path'])}\n{'>'.join(x for (x,_) in p.datas['path'])}" for p in graph_path[alignment].get_path_list()]))
+                    print(
+                        [f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
+                    mapping[f"r{targets[0]}"] = nedit
+
+        print(
+            [f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
+
+        for old_name, new_name in mapping.items():
+            print(f"Attempting rename {old_name} to {new_name}")
+            graph_path[alignment].rename_node(old_name, new_name)
+        print(
+            [f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
+
+        ############ END OF EDITION ###############
+
+    # Merging time in full graph!
+    # We first merge walks (addition of walks of each graph)
+    full_graph.walks = list(
+        chain(*[alg.walks for alg in graph_path.values()]))
+    full_graph.paths = list(
+        chain(*[alg.paths for alg in graph_path.values()]))
+    # Then we select segments, keeping memory of which we already copied and only by selecting them in path (edited in semigraph)
+    copied_segments: list = list()
+    for output_path in list(chain(full_graph.get_path_list())):
+        following: str = output_path.datas['name']
+        for seg, _ in output_path.datas['path']:
+            if seg not in copied_segments:
+                full_graph.segments.append(
+                    deepcopy(graph_path[following].get_segment(seg)))
+                copied_segments.append(seg)
+    # We will need next to recalculate edges (not implemented)
+    print(">>> Post renaming nodes")
+    print('\n'.join(
+        f"{p.datas['name']}\t{'>'.join(x for (x,_) in p.datas['path'])}" for p in full_graph.get_path_list()))
+
+    # We plot the output graph
+    full_graph.graph = MultiDiGraph()
+    tpg = full_graph.compute_networkx()
+    display_graph(tpg, "output", full_graph.colors)
+
+    return full_graph
 
 
 def edit_graph(
         graph_to_edit: Graph,
         edition_to_perform: dict[str, list[EditEvent]]
+
+
 ) -> Graph:
     """Given a graph and the consensus of a multipath edit, performs the required edition
 
@@ -401,9 +592,12 @@ def edit_graph(
     # Output graph will handle merges and final output
     output_graph: Graph = Graph()
 
+    # We copy initial non-edited paths to graph
+    copy_paths(graph_to_edit, edited_graph)
+
     mapping: dict = {}
     # We iterate over nodes. If we have to split, we split only in two, with the name being 'temp',<original_node_name>
-    for nedit, qedit in edition_to_perform.items():
+    for idx, (nedit, qedit) in enumerate(edition_to_perform.items()):
         print(f"{nedit} |-> {qedit}")
 
         # Deepcopy to block edits from propagating
@@ -421,20 +615,24 @@ def edit_graph(
                     splits := [
                         (
                             0,
-                            edition_event.length
+                            min(edition_event.length, edition_event.length_alt)
                         ),
                         (
-                            edition_event.length,
-                            edition_event.length_alt
+                            min(edition_event.length, edition_event.length_alt),
+                            max(edition_event.length, edition_event.length_alt)
                         )
                     ]
                 )
+                print(
+                    f"Splitting {edition_event.target_node} at {splits} for resp. {nodes_names}")
                 edition_event.target_node = '-1'
-                print(vars(edition_event))
-                print(f"Splitting at {splits} for resp. {nodes_names}")
+                # print(vars(edition_event))
+                print('\n'.join(
+                    f"{p.datas['name']}\t{'>'.join(x for (x,y) in p.datas['path'])}" for p in edited_graph.get_path_list()))
             # Récupérer le segment splitté et le coller à nouveau si on le rerencontre en merge ?
             # Faire en sorte que le split renvoie simplement du graphe ... pb des aretes et chemins, du renommage peut-être plus efficace
 
+        copy_paths(edited_graph, output_graph)
         targets: list[str] = [x.target_node for x in qedit]
         output_graph.segments += deepcopy([edited_graph.get_segment(segname)
                                           for segname in targets])
@@ -442,17 +640,32 @@ def edit_graph(
             list(chain.from_iterable([edited_graph.get_edges(segname) for segname in targets])))
         if len(targets) > 1:
             # We merge only if we have multiple nodes to consider
-            print(
-                f"Nodes in output graph : {[n.datas['name'] for n in output_graph.segments]}")
+            # print(f"Nodes in output graph : {[n.datas['name'] for n in output_graph.segments]}")
             print(f"Merging {targets} in r{nedit}")
             output_graph.merge_segments(*targets, merge_name=f"r{nedit}")
+            print('\n'.join(
+                f"{p.datas['name']}\t{'>'.join(x for (x,y) in p.datas['path'])}" for p in output_graph.get_path_list()))
             mapping[f"r{nedit}"] = nedit
         else:
+            print(f"Renaming {targets[0]} in r{targets[0]}")
             output_graph.rename_node(targets[0], f"r{targets[0]}")
+            print('\n'.join(
+                f"{p.datas['name']}\t{'>'.join(x for (x,y) in p.datas['path'])}" for p in output_graph.get_path_list()))
             mapping[f"r{targets[0]}"] = nedit
+        copy_paths(output_graph, edited_graph)
     # TODO fix fonction dans la lib qui ne cherche que par le nombre et non par le nom complet qui empêche donc la fonction de réussir sa tâche
     for old_name, new_name in mapping.items():
+        print(f"Attempting rename {old_name} to {new_name}")
         output_graph.rename_node(old_name, new_name)
+
+    print(">>> Post renaming nodes")
+    print('\n'.join(
+        f"{p.datas['name']}\t{'>'.join(x for (x,_) in p.datas['path'])}" for p in output_graph.get_path_list()))
+
+    output_graph.remove_duplicates_edges()
+    output_graph.graph = MultiDiGraph()
+    tpg = output_graph.compute_networkx()
+    display_graph(tpg, "output", output_graph.colors)
 
     return output_graph
 
@@ -505,11 +718,12 @@ def perform_edition(files: list, gfa_versions: list, output_folder: str, do_edit
                             f"{dipath.alignment_name}\t{key}\t{value}\n")
 
         # We evaluate we can perform the edition befor actually doing it
-        edit_moves: dict = evaluate_consensus(*all_dipaths)
+        # edit_moves: dict = evaluate_consensus(*all_dipaths)
 
         if do_edition:
 
-            edited: Graph = edit_graph(graph2, edit_moves)
+            # edited: Graph = edit_graph(graph2, edit_moves)
+            edited: Graph = edit_by_paths(graph2, all_dipaths)
 
             edited.save_graph(path.join(
                 output_folder, f"edited_graph_{Path(f1).stem}_{Path(f2).stem}.gfa"))
