@@ -635,9 +635,9 @@ def edit_by_paths(
     Returns:
         Graph: _description_
     """
-    graph_to_edit.graph = MultiDiGraph()
-    tpg = graph_to_edit.compute_networkx()
-    display_graph(tpg, "input", graph_to_edit.colors)
+    # graph_to_edit.graph = MultiDiGraph()
+    # tpg = graph_to_edit.compute_networkx()
+    # display_graph(tpg, "input", graph_to_edit.colors)
 
     full_graph: Graph = Graph()
 
@@ -769,9 +769,9 @@ def edit_by_paths(
     # We plot the output graph
     print(f"TOTAL EDITIONS = {number_of_merges + number_of_splits}")
     print(f"FINAL SCORE = {round(score,ndigits=1)}")
-    full_graph.graph = MultiDiGraph()
-    tpg = full_graph.compute_networkx()
-    display_graph(tpg, "output", full_graph.colors)
+    # full_graph.graph = MultiDiGraph()
+    # tpg = full_graph.compute_networkx()
+    # display_graph(tpg, "output", full_graph.colors)
 
     return full_graph, number_of_merges, number_of_splits
 
@@ -867,9 +867,9 @@ def edit_graph(
         f"{p.datas['name']}\t{'>'.join(x for (x,_) in p.datas['path'])}" for p in output_graph.get_path_list()))
 
     output_graph.remove_duplicates_edges()
-    output_graph.graph = MultiDiGraph()
-    tpg = output_graph.compute_networkx()
-    display_graph(tpg, "output", output_graph.colors)
+    # output_graph.graph = MultiDiGraph()
+    # tpg = output_graph.compute_networkx()
+    # display_graph(tpg, "output", output_graph.colors)
 
     return output_graph
 
