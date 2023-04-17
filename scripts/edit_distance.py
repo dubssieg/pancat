@@ -919,7 +919,8 @@ def perform_edition(files: list, gfa_versions: list, output_folder: str, do_edit
             total_counts += dipath.counts
 
         with open(path.join(output_folder, "out.log"), "w", encoding='utf-8') as output:
-            output.write(','.join([f"{t}:{v}" for t, v in total_counts])+'\n')
+            output.write(
+                ','.join([f"{t}:{v}" for t, v in total_counts.items()])+'\n')
 
             if do_edition:
 
