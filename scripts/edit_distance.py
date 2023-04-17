@@ -1,11 +1,12 @@
 "Modelizes edition between paths and computes if edition is acceptable inside a graph"
 from itertools import combinations, accumulate, chain
 from argparse import ArgumentParser, SUPPRESS
+from collections import Counter
 from os import path, remove
 from pathlib import Path
 from copy import deepcopy
 from indexed import IndexedOrderedDict
-from rich import print
+# from rich import print
 from pyvis.network import Network
 from networkx import MultiDiGraph
 from gfagraphs import Graph
@@ -85,7 +86,7 @@ class EditEvent():
         Returns:
             str: a description of the EditEvent
         """
-        return f"{self.event}()"  # (revcomp={self.revcomp}, positions={self.offsets_target}, refnode={self.reference_node}, qnode={self.target_node})
+        return f"{self.event}({round(self.affine_score(),ndigits=1)})"  # (revcomp={self.revcomp}, positions={self.offsets_target}, refnode={self.reference_node}, qnode={self.target_node})
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -93,41 +94,233 @@ class EditEvent():
     def __eq__(self, __o: object) -> bool:
         return isinstance(__o, type(self)) and self.positions_target == __o.positions_target and self.revcomp == __o.revcomp
 
+    def affine_score(self) -> int:
+        return 0
+
 
 class String(EditEvent):
     "Situation of two equal nodes"
+
+    def affine_score(
+        self,
+            event_score: float = 0,
+            shared_score: float = 0.1,
+            diverging_score: float = 0
+    ) -> float:
+        """Computes the score for edit event
+        Idea is that the number of shared bases account for n*shared_score,
+        the number of diverging bases account for n*diverging_score,
+        and the event has a base score named event_score.
+
+        Args:
+            event_score (float, optional): Base score for event. Defaults to -1.
+            shared_score (float, optional): Additional score for each shared nucleotide. Defaults to 0.1.
+            diverging_score (float, optional): Additional score for each not shared nucleotide. Defaults to -0.1.
+
+        Returns:
+            float: score for the event
+        """
+        return event_score + self.length*shared_score + 0*diverging_score
 
 
 class SubPrefix(EditEvent):
     "Particular kind of inclusion"
 
+    def affine_score(
+        self,
+            event_score: float = -1,
+            shared_score: float = 0.1,
+            diverging_score: float = -0.1
+    ) -> float:
+        """Computes the score for edit event
+        Idea is that the number of shared bases account for n*shared_score,
+        the number of diverging bases account for n*diverging_score,
+        and the event has a base score named event_score.
+
+        Args:
+            event_score (float, optional): Base score for event. Defaults to -1.
+            shared_score (float, optional): Additional score for each shared nucleotide. Defaults to 0.1.
+            diverging_score (float, optional): Additional score for each not shared nucleotide. Defaults to -0.1.
+
+        Returns:
+            float: score for the event
+        """
+        return event_score + min(self.length, self.length_alt)*shared_score + (max(self.length, self.length_alt)-min(self.length, self.length_alt))*diverging_score
+
 
 class SubSuffix(EditEvent):
     "Particular case of inclusion"
+
+    def affine_score(
+        self,
+            event_score: float = -1,
+            shared_score: float = 0.1,
+            diverging_score: float = -0.1
+    ) -> float:
+        """Computes the score for edit event
+        Idea is that the number of shared bases account for n*shared_score,
+        the number of diverging bases account for n*diverging_score,
+        and the event has a base score named event_score.
+
+        Args:
+            event_score (float, optional): Base score for event. Defaults to -1.
+            shared_score (float, optional): Additional score for each shared nucleotide. Defaults to 0.1.
+            diverging_score (float, optional): Additional score for each not shared nucleotide. Defaults to -0.1.
+
+        Returns:
+            float: score for the event
+        """
+        return event_score + min(self.length, self.length_alt)*shared_score + (max(self.length, self.length_alt)-min(self.length, self.length_alt))*diverging_score
 
 
 class SuperPrefix(EditEvent):
     "Particular kind of split"
 
+    def affine_score(
+        self,
+            event_score: float = -1,
+            shared_score: float = 0.1,
+            diverging_score: float = -0.1
+    ) -> float:
+        """Computes the score for edit event
+        Idea is that the number of shared bases account for n*shared_score,
+        the number of diverging bases account for n*diverging_score,
+        and the event has a base score named event_score.
+
+        Args:
+            event_score (float, optional): Base score for event. Defaults to -1.
+            shared_score (float, optional): Additional score for each shared nucleotide. Defaults to 0.1.
+            diverging_score (float, optional): Additional score for each not shared nucleotide. Defaults to -0.1.
+
+        Returns:
+            float: score for the event
+        """
+        return event_score + min(self.length, self.length_alt)*shared_score + (max(self.length, self.length_alt)-min(self.length, self.length_alt))*diverging_score
+
 
 class SuperSuffix(EditEvent):
     "Particular case of split"
+
+    def affine_score(
+        self,
+            event_score: float = -1,
+            shared_score: float = 0.1,
+            diverging_score: float = -0.1
+    ) -> float:
+        """Computes the score for edit event
+        Idea is that the number of shared bases account for n*shared_score,
+        the number of diverging bases account for n*diverging_score,
+        and the event has a base score named event_score.
+
+        Args:
+            event_score (float, optional): Base score for event. Defaults to -1.
+            shared_score (float, optional): Additional score for each shared nucleotide. Defaults to 0.1.
+            diverging_score (float, optional): Additional score for each not shared nucleotide. Defaults to -0.1.
+
+        Returns:
+            float: score for the event
+        """
+        return event_score + min(self.length, self.length_alt)*shared_score + (max(self.length, self.length_alt)-min(self.length, self.length_alt))*diverging_score
 
 
 class OverlapPrefixSuffix(EditEvent):
     "Prefix/Suffix means edit = Split"
 
+    def affine_score(
+        self,
+            event_score: float = -1,
+            shared_score: float = 0.1,
+            diverging_score: float = -0.2
+    ) -> float:
+        """Computes the score for edit event
+        Idea is that the number of shared bases account for n*shared_score,
+        the number of diverging bases account for n*diverging_score,
+        and the event has a base score named event_score.
+
+        Args:
+            event_score (float, optional): Base score for event. Defaults to -1.
+            shared_score (float, optional): Additional score for each shared nucleotide. Defaults to 0.1.
+            diverging_score (float, optional): Additional score for each not shared nucleotide. Defaults to -0.1.
+
+        Returns:
+            float: score for the event
+        """
+        return event_score + min(self.length, self.length_alt)*shared_score + (max(self.length, self.length_alt)-min(self.length, self.length_alt))*diverging_score
+
 
 class OverlapSuffixPrefix(EditEvent):
     "Prefix/suffix means edit = split"
+
+    def affine_score(
+        self,
+            event_score: float = -1,
+            shared_score: float = 0.1,
+            diverging_score: float = -0.2
+    ) -> float:
+        """Computes the score for edit event
+        Idea is that the number of shared bases account for n*shared_score,
+        the number of diverging bases account for n*diverging_score,
+        and the event has a base score named event_score.
+
+        Args:
+            event_score (float, optional): Base score for event. Defaults to -1.
+            shared_score (float, optional): Additional score for each shared nucleotide. Defaults to 0.1.
+            diverging_score (float, optional): Additional score for each not shared nucleotide. Defaults to -0.1.
+
+        Returns:
+            float: score for the event
+        """
+        return event_score + min(self.length, self.length_alt)*shared_score + (max(self.length, self.length_alt)-min(self.length, self.length_alt))*diverging_score
 
 
 class SubString(EditEvent):
     "Affix succession means that edit = merge"
 
+    def affine_score(
+        self,
+            event_score: float = -1,
+            shared_score: float = 0.1,
+            diverging_score: float = -0.1
+    ) -> float:
+        """Computes the score for edit event
+        Idea is that the number of shared bases account for n*shared_score,
+        the number of diverging bases account for n*diverging_score,
+        and the event has a base score named event_score.
+
+        Args:
+            event_score (float, optional): Base score for event. Defaults to -1.
+            shared_score (float, optional): Additional score for each shared nucleotide. Defaults to 0.1.
+            diverging_score (float, optional): Additional score for each not shared nucleotide. Defaults to -0.1.
+
+        Returns:
+            float: score for the event
+        """
+        return event_score + min(self.length, self.length_alt)*shared_score + (max(self.length, self.length_alt)-min(self.length, self.length_alt))*diverging_score
+
 
 class SuperString(EditEvent):
     "Cut on both ends"
+
+    def affine_score(
+        self,
+            event_score: float = -1,
+            shared_score: float = 0.1,
+            diverging_score: float = -0.1
+    ) -> float:
+        """Computes the score for edit event
+        Idea is that the number of shared bases account for n*shared_score,
+        the number of diverging bases account for n*diverging_score,
+        and the event has a base score named event_score.
+
+        Args:
+            event_score (float, optional): Base score for event. Defaults to -1.
+            shared_score (float, optional): Additional score for each shared nucleotide. Defaults to 0.1.
+            diverging_score (float, optional): Additional score for each not shared nucleotide. Defaults to -0.1.
+
+        Returns:
+            float: score for the event
+        """
+        return event_score + min(self.length, self.length_alt)*shared_score + (max(self.length, self.length_alt)-min(self.length, self.length_alt))*diverging_score
 
 
 class PathEdit:
@@ -159,6 +352,13 @@ class PathEdit:
                 f"Could not compute edition between the paths {self.alignment_name} as they don't describe the same sequences.\n\n\t{''.join(path_a.values())}\n\t{''.join(path_b.values())}")
         self.edition: IndexedOrderedDict = IndexedOrderedDict()
         self.compute_edition()
+        self.counts = self.get_counts()
+
+    def get_counts(self) -> Counter:
+        counter: Counter = Counter()
+        for edit in self.edition.values():
+            counter += Counter([type(e) for e in edit])
+        return counter
 
     def compute_edition(self):
         "We give a list of strings that are the segments in the order the path traverses them"
@@ -385,7 +585,7 @@ class PathEdit:
                 # print(f"IdxRef={idx_reference}, Oref={offset_reference} || IdxQry={idx_query}, Oqry={offset_query}")
 
             self.edition[self.reference_path.keys()[current_pos]] = edit_list
-            print(edit_list)
+            # print(edit_list)
             edit_list: list = list()
 
 
@@ -402,6 +602,8 @@ def evaluate_consensus(*paths_editions: PathEdit) -> dict:
         shared_nodes = set(path_A.edition.keys()).intersection(
             set(path_B.edition.keys()))
         if not (path_A.can_be_aligned and path_B.can_be_aligned and all([path_A.edition[x] == path_B.edition[x] for x in shared_nodes])):
+            print(
+                '\n'.join([f"{x} : {[n.target_node+', '+str(n) for n in path_A.edition[x]]} ({path_A.alignment_name}) <=> {[n.target_node+', '+str(n) for n in path_B.edition[x]]} ({path_B.alignment_name})" for x in shared_nodes if path_A.edition[x] != path_B.edition[x]]))
             raise ValueError("No consensus could be made between paths.")
     all_edits: IndexedOrderedDict = IndexedOrderedDict()
     for pe in paths_editions:
@@ -423,7 +625,7 @@ def copy_paths(in_graph: Graph, out_graph: Graph) -> None:
 def edit_by_paths(
         graph_to_edit: Graph,
         edit_on_paths: list[PathEdit]
-) -> Graph:
+) -> tuple[Graph, int, int]:
     """Path-aware edition. Limits collision between successive edits on multiple paths.
 
     Args:
@@ -442,11 +644,15 @@ def edit_by_paths(
     graph_path: dict[str, Graph] = {
         edit.alignment_name: Graph() for edit in edit_on_paths}
 
+    number_of_splits: int = 0
+    number_of_merges: int = 0
+    score: float = 0
+
     # We iterate on each path
     for pathedit in edit_on_paths:
         # Init values for alignment edition
         alignment: str = pathedit.alignment_name
-        print(f"\n\n>>>>> {alignment} <<<<<\n\n")
+        # print(f"\n\n>>>>> {alignment} <<<<<\n\n")
         # We copy the path we want to follow
         graph_path[alignment].walks = [
             deepcopy(w) for w in graph_to_edit.walks if w.datas['name'] == pathedit.alignment_name]
@@ -458,13 +664,14 @@ def edit_by_paths(
         negative_edits: int = 0
         # We iterate over nodes. If we have to split, we split only in two, with the name being 'temp',<original_node_name>
         for nedit, qedit in pathedit.edition.items():
-            print(f"{nedit} |-> {qedit}")
+            # print(f"{nedit} |-> {qedit}")
 
             # Deepcopy to block edits from propagating
             graph_path[alignment].segments += deepcopy(
                 [graph_to_edit.get_segment(segname.target_node) for segname in qedit if segname.target_node not in [s.datas['name'] for s in graph_path[alignment].segments]])
 
             for edition_event in qedit:
+                score += edition_event.affine_score()
                 if type(edition_event) in [SuperPrefix, OverlapPrefixSuffix, SuperString]:
                     negative_edits -= 1
                     if type(edition_event) in [OverlapPrefixSuffix, SuperString]:
@@ -493,14 +700,13 @@ def edit_by_paths(
                             )
                         ]
                     )
-                    print(
-                        f"Splitting {edition_event.target_node} at {splits} for resp. {nodes_names}")
+                    number_of_splits += 1
+                    # print(f"Splitting {edition_event.target_node} at {splits} for resp. {nodes_names}")
 
                     edition_event.target_node = f'{negative_edits}'
                     # print(vars(edition_event))
-                    print(''.join([f"{'>'.join(graph_path[alignment].get_segment(x).datas['seq'] if x in [s.datas['name'] for s in graph_path[alignment].segments] else '?' for (x,_) in p.datas['path'])}\n{'>'.join(x for (x,_) in p.datas['path'])}" for p in graph_path[alignment].get_path_list()]))
-                    print(
-                        [f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
+                    # print(''.join([f"{'>'.join(graph_path[alignment].get_segment(x).datas['seq'] if x in [s.datas['name'] for s in graph_path[alignment].segments] else '?' for (x,_) in p.datas['path'])}\n{'>'.join(x for (x,_) in p.datas['path'])}" for p in graph_path[alignment].get_path_list()]))
+                    # print([f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
         # Estimating targets
         targets_of_target: dict = {}
         cumulative_len: int = 0
@@ -510,37 +716,34 @@ def edit_by_paths(
                 x for p in graph_path[alignment].get_path_list() for (x, _) in p.datas['path']]
             targets_of_target[nedit] = names_in_path[cumulative_len:cumulative_len+number_of_edits]
             cumulative_len += number_of_edits
-        print(targets_of_target)
+        # print(targets_of_target)
 
         for nedit, targets in targets_of_target.items():
             if len(targets) > 1:
                 # We merge only if we have multiple nodes to consider
                 # print(f"Nodes in output graph : {[n.datas['name'] for n in output_graph.segments]}")
-                print(f"Merging {targets} in r{nedit}")
+                # print(f"Merging {targets} in r{nedit}")
                 graph_path[alignment].merge_segments(
                     *targets, merge_name=f"r{nedit}")
-                print(''.join([f"{'>'.join(graph_path[alignment].get_segment(x).datas['seq'] if x in [s.datas['name'] for s in graph_path[alignment].segments] else '?' for (x,_) in p.datas['path'])}\n{'>'.join(x for (x,_) in p.datas['path'])}" for p in graph_path[alignment].get_path_list()]))
-                print(
-                    [f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
+                # print(''.join([f"{'>'.join(graph_path[alignment].get_segment(x).datas['seq'] if x in [s.datas['name'] for s in graph_path[alignment].segments] else '?' for (x,_) in p.datas['path'])}\n{'>'.join(x for (x,_) in p.datas['path'])}" for p in graph_path[alignment].get_path_list()]))
+                # print([f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
                 mapping[f"r{nedit}"] = nedit
+                number_of_merges += len(targets)-1
             else:
                 if not '-' in targets[0]:
-                    print(f"Renaming {targets[0]} in r{targets[0]}")
+                    # print(f"Renaming {targets[0]} in r{targets[0]}")
                     graph_path[alignment].rename_node(
                         targets[0], f"r{targets[0]}")
-                    print(''.join([f"{'>'.join(graph_path[alignment].get_segment(x).datas['seq'] if x in [s.datas['name'] for s in graph_path[alignment].segments] else '?' for (x,_) in p.datas['path'])}\n{'>'.join(x for (x,_) in p.datas['path'])}" for p in graph_path[alignment].get_path_list()]))
-                    print(
-                        [f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
+                    # print(''.join([f"{'>'.join(graph_path[alignment].get_segment(x).datas['seq'] if x in [s.datas['name'] for s in graph_path[alignment].segments] else '?' for (x,_) in p.datas['path'])}\n{'>'.join(x for (x,_) in p.datas['path'])}" for p in graph_path[alignment].get_path_list()]))
+                    # print([f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
                     mapping[f"r{targets[0]}"] = nedit
 
-        print(
-            [f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
+        # print([f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
 
         for old_name, new_name in mapping.items():
-            print(f"Attempting rename {old_name} to {new_name}")
+            # print(f"Attempting rename {old_name} to {new_name}")
             graph_path[alignment].rename_node(old_name, new_name)
-        print(
-            [f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
+        # print([f"{s.datas['name']}:{s.datas['seq']}" for s in graph_path[alignment].segments])
 
         ############ END OF EDITION ###############
 
@@ -560,16 +763,17 @@ def edit_by_paths(
                     deepcopy(graph_path[following].get_segment(seg)))
                 copied_segments.append(seg)
     # We will need next to recalculate edges (not implemented)
-    print(">>> Post renaming nodes")
-    print('\n'.join(
-        f"{p.datas['name']}\t{'>'.join(x for (x,_) in p.datas['path'])}" for p in full_graph.get_path_list()))
+    # print(">>> Post renaming nodes")
+    # print('\n'.join(f"{p.datas['name']}\t{'>'.join(x for (x,_) in p.datas['path'])}" for p in full_graph.get_path_list()))
 
     # We plot the output graph
+    print(f"TOTAL EDITIONS = {number_of_merges + number_of_splits}")
+    print(f"FINAL SCORE = {round(score,ndigits=1)}")
     full_graph.graph = MultiDiGraph()
     tpg = full_graph.compute_networkx()
     display_graph(tpg, "output", full_graph.colors)
 
-    return full_graph
+    return full_graph, number_of_merges, number_of_splits
 
 
 def edit_graph(
@@ -710,25 +914,35 @@ def perform_edition(files: list, gfa_versions: list, output_folder: str, do_edit
 
             all_dipaths.append(PathEdit(dpath, pog1, pog2))
 
-        with open("out.log", "w", encoding='utf-8') as output:
+        total_counts: Counter = Counter()
+        for dipath in all_dipaths:
+            total_counts += dipath.counts
+
+        with open(path.join(output_folder, "out.log"), "w", encoding='utf-8') as output:
+            output.write(','.join([f"{t}:{v}" for t, v in total_counts])+'\n')
+
+            if do_edition:
+
+                # edited: Graph = edit_graph(graph2, edit_moves)
+                edited, merges, splits = edit_by_paths(graph2, all_dipaths)
+
+                edited.save_graph(path.join(
+                    output_folder, f"edited_graph_{Path(f1).stem}_{Path(f2).stem}.gfa"))
+
+                output.write(f"merges:{merges},splits:{splits}\n")
+            del graph1, graph2
+
             for dipath in all_dipaths:
                 for key, value in dipath.edition.items():
                     if not isinstance(value[0], String):
                         output.write(
-                            f"{dipath.alignment_name}\t{key}\t{value}\n")
+                            f"{dipath.alignment_name},{key},{value}\n")
 
-        # We evaluate we can perform the edition befor actually doing it
+        # We evaluate we can perform the edition before actually doing it
+        # score: float = 0
         # edit_moves: dict = evaluate_consensus(*all_dipaths)
-
-        if do_edition:
-
-            # edited: Graph = edit_graph(graph2, edit_moves)
-            edited: Graph = edit_by_paths(graph2, all_dipaths)
-
-            edited.save_graph(path.join(
-                output_folder, f"edited_graph_{Path(f1).stem}_{Path(f2).stem}.gfa"))
-
-        del graph1, graph2
+        # for _, edit_list in edit_moves.items():
+        #    score += sum([e.affine_score() for e in edit_list])
 
 
 if __name__ == "__main__":
