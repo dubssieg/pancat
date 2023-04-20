@@ -144,7 +144,7 @@ parser_identify: ArgumentParser = subparsers.add_parser(
 parser_identify.add_argument(
     "paffile", type=str, help="paf-like file")
 parser_identify.add_argument("-t", "--threshold", type=int,
-                             help="minimum size for assemblies. default : 40000000.", default=4000000)
+                             help="minimum size for assemblies. default : 4000000.", default=4000000)
 
 ## Subparser for grapher ##
 
