@@ -30,7 +30,7 @@ def export_mapping(paf_file: str, save: bool = False, threshold: int = 4000000) 
 
     if save:
         dump(mapping, open(
-            f"{paf_file.split('.')[0]}_out.json", "w", encoding="utf-8"))
+            f"{paf_file.split('.')[0]}_chromosom_mapping.json", "w", encoding="utf-8"))
     return mapping
 
 
@@ -67,11 +67,14 @@ if __name__ == "__main__":
         "out", type=str, help="fasta-like output")
     parser.add_argument(
         "paffile", type=str, help="paf-like file")
-    parser.add_argument(
-        "chromosom", type=str, help="name of assembly on reference sequence")
+    parser.add_argument("-c",
+                        "--chromosom", type=str, help="name of assembly on reference sequence", default=None)
     args = parser.parse_args()
     parser.add_argument('-h', '--help', action='help', default=SUPPRESS,
                         help='Extracts from a fasta-like file all sequences in a query assembly given a mapping to a reference and an identifier on reference.')
 
-    isolate_scaffolds(fasta_file=args.file, out_file=args.out,
-                      paf_file=args.paffile, chromosom=args.chromosom)
+    if args.chromosom is None:
+        export_mapping(paf_file=args.file, save=True)
+    else:
+        isolate_scaffolds(fasta_file=args.file, out_file=args.out,
+                          paf_file=args.paffile, chromosom=args.chromosom)
