@@ -8,7 +8,7 @@ from tharospytools import get_palette
 from scripts.isolate_by_range import isolate
 from scripts.offset_in_gfa import add_offsets_to_gfa
 from scripts.paths_bubblegun_bfs import bfs_step, paths_step
-from scripts.parse_genomes import isolate_scaffolds
+from scripts.parse_genomes import isolate_scaffolds, export_mapping
 from scripts.grapher import html_graph
 from scripts.levenshtein_distance import show_identity, display_graph
 from scripts.compare_by_offset import display_graph as compare_display_graph, get_backbone, compare_positions, extract_components
@@ -134,6 +134,17 @@ parser_scaffold.add_argument(
     "paffile", type=str, help="paf-like file")
 parser_scaffold.add_argument(
     "chromosom", type=str, help="name of assembly on reference sequence")
+
+## Subparser for parse_genomes ##
+
+
+parser_identify: ArgumentParser = subparsers.add_parser(
+    'identify', help="Cuts fasta file to isolate chromosoms/scaffolds from PAF file.\n"
+    "Extracts from a fasta-like file all sequences in a query assembly a mapping to a reference.")
+parser_identify.add_argument(
+    "paffile", type=str, help="paf-like file")
+parser_identify.add_argument("-t", "--threshold", type=int,
+                             help="minimum size for assemblies. default : 40000000.", default=4000000)
 
 ## Subparser for grapher ##
 
@@ -341,6 +352,8 @@ def main() -> None:
     if args.subcommands == 'isolate':
         isolate(args.file, args.out, args.start, args.end,
                 args.gfa_version, args.reference)
+    elif args.subcommands == 'identify':
+        export_mapping(args.paffile, save=True, threshold=args.threshold)
     elif args.subcommands == 'offset':
         add_offsets_to_gfa(args.file, args.out, args.gfa_version)
     elif args.subcommands == 'neighborhood':
