@@ -68,14 +68,15 @@ def isolate_sequence(fasta_file: str, out_file: str, chromosom: str) -> None:
         chromosom (str): chromosom identifier, name used on reference file
     """
     nb_seq, length = 0, 0
-    for fasta in SeqIO.parse(open(fasta_file, 'r', encoding="utf-8"), 'fasta'):
-        if fasta.id == chromosom:
-            print(f"Writing {fasta.id} to {out_file}...")
-            SeqIO.write(fasta, out_file, 'fasta')
-            nb_seq += 1
+    with open(out_file, 'w', encoding='utf-8') as fwrite:
+        for fasta in SeqIO.parse(open(fasta_file, 'r', encoding="utf-8"), 'fasta'):
+            if fasta.id == chromosom:
+                print(f"Writing {fasta.id} to {out_file}...")
+                fwrite.write(f"> {fasta.id}\n{fasta.seq}\n")
+                nb_seq += 1
             length += len(fasta.seq)
-        print(
-            f"Job done, {nb_seq} sequences were written for a total of {length} bases!")
+    print(
+        f"Job done, {nb_seq} sequences were written for a total of {length} bases!")
 
 
 if __name__ == "__main__":
