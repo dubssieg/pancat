@@ -71,7 +71,7 @@ def isolate_sequence(fasta_file: str, out_file: str, chromosom: str) -> None:
     if path.exists(out_file):
         print(f"Erasing {out_file}")
         remove(out_file)
-    with open(out_file, 'a', encoding="utf-8") as handler:
+    with open(out_file, 'w', encoding="utf-8") as handler:
         for fasta in SeqIO.parse(open(fasta_file, 'r', encoding="utf-8"), 'fasta'):
             if fasta.id == chromosom:
                 print(f"Writing {fasta.id} to {out_file}...")
