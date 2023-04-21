@@ -144,8 +144,8 @@ parser_sequence.add_argument(
     "file", type=str, help="fasta-like file")
 parser_sequence.add_argument(
     "out", type=str, help="fasta-like output")
-parser_sequence.add_argument(
-    "chromosom", type=str, help="name of assembly on reference sequence")
+parser_sequence.add_argument("-c"
+                             "--chromosom", type=str, help="name of assembly on reference sequence", required=True)
 
 ## Subparser for parse_genomes ##
 
