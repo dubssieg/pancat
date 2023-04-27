@@ -814,8 +814,17 @@ def perform_edition(
             total_counts += dipath.counts
 
         with open(path.join(output_folder, f"out_{i}.log"), "w", encoding='utf-8') as output:
-            output.write(
-                ','.join([f"{t}:{v}" for t, v in total_counts.items()])+'\n')
+            # output.write(','.join([f"{t}:{v}" for t, v in total_counts.items()])+'\n')
+
+            # Write edited stuff in log
+            for dipath in all_dipaths:
+                for key, value in dipath.edition.items():
+                    # value is a list of EditEvent
+                    if not isinstance(value[0], String):
+                        edits: str = ','.join(
+                            [f"{val},{val.offsets_ref},{val.offsets_target}" for val in value])
+                        output.write(
+                            f"{dipath.alignment_name},{key},{edits}\n")
 
             # If we ask to compute edition, we do it
             if do_edition:
@@ -828,13 +837,6 @@ def perform_edition(
 
                 output.write(f"merges:{merges},splits:{splits}\n")
             del graph1, graph2
-
-            # Write edited stuff in log
-            for dipath in all_dipaths:
-                for key, value in dipath.edition.items():
-                    if not isinstance(value[0], String):
-                        output.write(
-                            f"{dipath.alignment_name},{key},{value}\n")
 
 
 if __name__ == "__main__":
