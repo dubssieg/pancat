@@ -146,6 +146,10 @@ parser_sequence.add_argument(
     "out", type=str, help="fasta-like output")
 parser_sequence.add_argument("-c",
                              "--chromosom", type=str, help="name of assembly on reference sequence", required=True)
+parser_sequence.add_argument("-s",
+                             "--start", type=int, help="position where to start extraction", default=0)
+parser_sequence.add_argument("-e",
+                             "--end", type=int, help="position where to end extraction", default=None)
 
 ## Subparser for parse_genomes ##
 
@@ -367,7 +371,8 @@ def main() -> None:
     elif args.subcommands == 'identify':
         export_mapping(args.paffile, save=True, threshold=args.threshold)
     elif args.subcommands == 'sequence':
-        isolate_sequence(args.file, args.out, args.chromosom)
+        isolate_sequence(args.file, args.out, args.chromosom,
+                         args.start, args.end)
     elif args.subcommands == 'offset':
         add_offsets_to_gfa(args.file, args.out, args.gfa_version)
     elif args.subcommands == 'neighborhood':

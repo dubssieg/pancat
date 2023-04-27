@@ -58,7 +58,7 @@ def isolate_scaffolds(fasta_file: str, out_file: str, paf_file: str, chromosom: 
             f"Job done, {nb_seq} sequences were written for a total of {length} bases!")
 
 
-def isolate_sequence(fasta_file: str, out_file: str, chromosom: str) -> None:
+def isolate_sequence(fasta_file: str, out_file: str, chromosom: str, start: int = 0, end: int | None = None) -> None:
     """Isolate scaffolds based upon correspondances from reference to query
 
     Args:
@@ -67,16 +67,14 @@ def isolate_sequence(fasta_file: str, out_file: str, chromosom: str) -> None:
         paf_file (str): mapping of reference against query
         chromosom (str): chromosom identifier, name used on reference file
     """
-    nb_seq, length = 0, 0
     with open(out_file, 'w', encoding='utf-8') as fwrite:
         for fasta in SeqIO.parse(open(fasta_file, 'r', encoding="utf-8"), 'fasta'):
             if fasta.id == chromosom:
                 print(f"Writing {fasta.id} to {out_file}...")
-                fwrite.write(f"> {fasta.id}\n{fasta.seq}\n")
-                nb_seq += 1
-            length += len(fasta.seq)
-    print(
-        f"Job done, {nb_seq} sequences were written for a total of {length} bases!")
+                if end is None:
+                    end = len(fasta.seq)
+                fwrite.write(f"> {fasta.id}\n{fasta.seq[start:end]}\n")
+                print("Writing done!")
 
 
 if __name__ == "__main__":
