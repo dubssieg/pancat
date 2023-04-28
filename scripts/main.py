@@ -19,6 +19,7 @@ from scripts.reconstruct_sequences import reconstruct, node_range, grab_paths
 from scripts.map_graph_nodes import mapper, dotgrid_plot, show_alignments, exact_mapper, get_lengths
 from scripts.create_vcf import render_vcf, get_graph_structure
 from scripts.edit_distance import perform_edition
+from scripts.extract_edit_bubbles import get_edit_bubbles, extract_bubble, compute_extraction
 from rich import print
 
 from rich.traceback import install
@@ -257,6 +258,26 @@ parser_length.add_argument(
     nargs='+'
 )
 
+## Subparser for extract_edit_bubbles ##
+
+parser_bubbles: ArgumentParser = subparsers.add_parser(
+    'bubbles', help="Extracts edition bubbles between two graphs"
+)
+
+parser_bubbles.add_argument("graph_1", type=str, help="gfa-like file")
+parser_bubbles.add_argument("graph_2", type=str, help="gfa-like file")
+
+parser_bubbles.add_argument(
+    "ver_1",
+    help="GFA input style",
+    choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
+)
+parser_bubbles.add_argument(
+    "ver_2",
+    help="GFA input style",
+    choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
+)
+
 ## Subparser for length_ratios ##
 
 parser_vcfmatch: ArgumentParser = subparsers.add_parser(
@@ -466,6 +487,25 @@ def main() -> None:
     elif args.subcommands == 'edit':
         perform_edition(args.file, args.gfa_version,
                         args.output_folder, args.perform_edition)
+    elif args.subcommands == 'bubbles':
+        equivalences = get_edit_bubbles(
+            args.graph_1, args.ver_1, args.graph_2, args.ver_2)
+        source_sink = extract_bubble(equivalences)
+        extraction_points = compute_extraction(source_sink)
+        graph_1: bGraph = bGraph(args.graph_1)
+        graph_2: bGraph = bGraph(args.graph_2)
+        # Extracting on both components
+        for i, ((pos_1, nb_nodes_1), (pos_2, nb_nodes_2)) in enumerate(extraction_points):
+            # On graph 1
+            output_1: str = f"{args.graph_1('.')[0]}_component{i}.gfa"
+            nodes_1: set = bfs_step(graph_1, pos_1, nb_nodes_1)
+            paths_step(args.graph_1, output_1, nodes_1,
+                       args.ver_1, args.ver_1)
+            # On graph 2
+            output_2: str = f"{args.graph_2('.')[0]}_component{i}.gfa"
+            nodes_2: set = bfs_step(graph_2, pos_2, nb_nodes_2)
+            paths_step(args.graph_2, output_2, nodes_2,
+                       args.ver_2, args.ver_2)
     else:
         print(
             "[dark_orange]Unknown command. Please use the help to see available commands.")
