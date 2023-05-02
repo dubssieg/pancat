@@ -4,7 +4,7 @@
 
 # PANGRAPHS - GFA visualisation and exploration
 
-Pangenome graphs visualisation (sort of) with interactive html files, and implementations of many scripts for performing various actions on GFA-like graphs.
+Implementations of many functions for performing various actions on GFA-like graphs in a command-line tool, such as extracting or offseting a pangenome graph. Is capable of comparing graphs topology between graphs that happen to contain the same set of sequences. Does pangenome graphs visualisation with interactive html files.
 
 <p align="center">
   <img src="toy_examples/graph_2.png" width="100%" />
