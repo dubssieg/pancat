@@ -817,15 +817,21 @@ def perform_edition(
             # output.write(','.join([f"{t}:{v}" for t, v in total_counts.items()])+'\n')
 
             # Write edited stuff in log
+            relations_counter: Counter = Counter()
+            required_merges: int = 0
             for dipath in all_dipaths:
                 for key, value in dipath.edition.items():
+                    required_merges += max(0, len(value)-1)
+                    relations_counter.update([type(val) for val in value])
                     # value is a list of EditEvent
-                    if not isinstance(value[0], String):
-                        edits: str = ','.join(
-                            [f"{val},{val.offsets_ref},{val.offsets_target}" for val in value])
-                        output.write(
-                            f"{dipath.alignment_name},{key},{edits}\n")
-
+                    edits: str = ','.join(
+                        [f"{val},{val.offsets_ref},{val.offsets_target}" for val in value])
+                    output.write(
+                        f"{dipath.alignment_name},{key},{edits}\n")
+            output.write(f"Required merges : {required_merges}")
+            output.write(
+                f"Required splits : {relations_counter[OverlapPrefixSuffix]+relations_counter[SuperPrefix]+relations_counter[SuperString]}")
+            output.write(str(relations_counter))
             # If we ask to compute edition, we do it
             if do_edition:
 
