@@ -11,9 +11,6 @@ if CURRENT_PYTHON < REQUIRED_PYTHON:
         f"{NAME} requires Python 3.10 or higher and your current version is {CURRENT_PYTHON}.")
     exit(1)
 
-with open("requirements.txt", "r", encoding='utf-8') as fh:
-    requirements = [line.strip() for line in fh]
-
 setup(
     name=NAME,
     version='0.1.0',
@@ -28,6 +25,7 @@ setup(
     license="LICENSE",
     long_description=open("README.md", encoding='utf-8').read(),
     long_description_content_type='text/markdown',
-    install_requires=requirements,
+    install_requires=['matplotlib', 'seaborn', 'numpy', 'pyvis', 'networkx', 'mycolorpy', 'levenshtein',
+                      'gfagraphs', 'tharos-pytools', 'BubbleGun', 'statsmodels', 'resource', 'Bio', 'rich'],
     entry_points={'console_scripts': ['pangraphs=workspace.main:main']}
 )

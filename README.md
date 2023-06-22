@@ -2,7 +2,7 @@
 [![](https://img.shields.io/badge/python-3.11-blue.svg)]()
 [![](https://img.shields.io/badge/documentation-unfinished-orange.svg)]()
 [![](https://img.shields.io/badge/wiki-nonexistent-red.svg)]()
-[![](https://img.shields.io/badge/comments-unfinished-orange.svg)]()
+[![](https://img.shields.io/badge/comments-done-green.svg)]()
 [![](https://img.shields.io/badge/build-passing-green.svg)]()
 
 # PANGRAPHS - GFA visualisation and exploration
