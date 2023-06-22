@@ -25,3 +25,11 @@ python -m pip install . --quiet
 This program is a collection of tools. Not every function or script is accessible through the front-end `pangraphs`, but this front-end showcase what the tools can do.
 Other tools are in the `scripts` folder. 
 
+Are available through `pangraphs`:
+
+- **grapher** creates interactive graph representation from a GFA file
+- **reconstruct** recreates the linear sequences from the graph
+- **offset** adds relative position information as a tag in GFA file
+- **isolate** extracts a subgraph from positions in the paths
+- **neigborhood** extracts a subgraph from a set of nodes around a node
+- **edit** computes a edit distance between variation graphs
