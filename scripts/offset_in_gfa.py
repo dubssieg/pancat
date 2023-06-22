@@ -42,9 +42,11 @@ def calculate_sequence_offsets(node_data: list[tuple], walks: list[Record]) -> l
                 orientations[i] = str(walks_orientations[i][pos].value)
             except ValueError:
                 pass
+        # print(f"{}")
         sequence_offsets.append(
             {walks[x].datas["name"]: (offsets[x]-length, offsets[x], orientations[x])
              for x in inside_walks}
+
         )
 
     return sequence_offsets
@@ -60,7 +62,7 @@ def add_offsets_to_gfa(gfa_file: str, output_file: str, gfa_version: str) -> Non
     """
     if (GfaStyle(gfa_version)) == GfaStyle.RGFA:
         raise NotImplementedError(
-            "Nodes can be extracted, but paths could not be determined.")
+            "Cannot be used as there's no path here.")
     embed_paths: list[Record] = list()
     nodes_information: list[tuple] = list()
     with open(gfa_file, 'r', encoding='utf-8') as gfa_reader:

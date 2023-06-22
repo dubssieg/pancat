@@ -4,22 +4,12 @@ from sys import argv
 from networkx import MultiDiGraph
 from BubbleGun.Graph import Graph as bGraph
 from gfagraphs import Graph as pGraph
-from tharospytools import get_palette
 from scripts.isolate_by_range import isolate
 from scripts.offset_in_gfa import add_offsets_to_gfa
 from scripts.paths_bubblegun_bfs import bfs_step, paths_step
-from scripts.parse_genomes import isolate_scaffolds, export_mapping, isolate_sequence
-from scripts.grapher import html_graph
-from scripts.levenshtein_distance import show_identity, display_graph
-from scripts.compare_by_offset import display_graph as compare_display_graph, get_backbone, compare_positions, extract_components
-from scripts.gfa_convert import rgfa_to_gfa
-from scripts.length_ratios import parse_gfa, plot_ratio
-from scripts.vcf_on_graph import vcf_heatmap, match_nodes_to_vcf, vcf_parser
+from scripts.grapher import compute_stats, display_graph
 from scripts.reconstruct_sequences import reconstruct, node_range, grab_paths
-from scripts.map_graph_nodes import mapper, dotgrid_plot, show_alignments, exact_mapper, get_lengths
-from scripts.create_vcf import render_vcf, get_graph_structure
 from scripts.edit_distance import perform_edition
-from scripts.extract_edit_bubbles import get_edit_bubbles, extract_bubble, compute_extraction
 from rich import print
 
 from rich.traceback import install
@@ -121,47 +111,6 @@ parser_neighborhood.add_argument(
 parser_neighborhood.add_argument("-c", "--count", type=int,
                                  help="Number of nodes around each starting point")
 
-## Subparser for parse_genomes ##
-
-
-parser_scaffold: ArgumentParser = subparsers.add_parser(
-    'scaffold', help="Cuts fasta file to isolate chromosoms/scaffolds from PAF file.\n"
-    "Extracts from a fasta-like file all sequences in a query assembly given a mapping to a reference and an identifier on reference.")
-parser_scaffold.add_argument(
-    "file", type=str, help="fasta-like file")
-parser_scaffold.add_argument(
-    "out", type=str, help="fasta-like output")
-parser_scaffold.add_argument(
-    "paffile", type=str, help="paf-like file")
-parser_scaffold.add_argument(
-    "chromosom", type=str, help="name of assembly on reference sequence")
-
-## Subparser for parse_genomes ##
-
-
-parser_sequence: ArgumentParser = subparsers.add_parser(
-    'sequence', help="Cuts fasta file to isolate chromosoms/scaffolds from sequence ID.")
-parser_sequence.add_argument(
-    "file", type=str, help="fasta-like file")
-parser_sequence.add_argument(
-    "out", type=str, help="fasta-like output")
-parser_sequence.add_argument("-c",
-                             "--chromosom", type=str, help="name of assembly on reference sequence", required=True)
-parser_sequence.add_argument("-s",
-                             "--start", type=int, help="position where to start extraction", default=0)
-parser_sequence.add_argument("-e",
-                             "--end", type=int, help="position where to end extraction", default=None)
-
-## Subparser for parse_genomes ##
-
-
-parser_identify: ArgumentParser = subparsers.add_parser(
-    'identify', help="Cuts fasta file to isolate chromosoms/scaffolds from PAF file.\n"
-    "Extracts from a fasta-like file all sequences in a query assembly a mapping to a reference.")
-parser_identify.add_argument(
-    "paffile", type=str, help="paf-like file")
-parser_identify.add_argument("-t", "--threshold", type=int,
-                             help="minimum size for assemblies. default : 4000000.", default=4000000)
 
 ## Subparser for grapher ##
 
@@ -170,126 +119,12 @@ parser_grapher: ArgumentParser = subparsers.add_parser(
     "Huge graphs may take long time to display, or might be messy. Advice would be to extract parts you want to display (with pangraphs isolate or pangraphs neighborhood for instance), then computes the vizualisation on the selected part.")
 
 parser_grapher.add_argument("file", type=str, help="Path to a gfa-like file")
-parser_grapher.add_argument("job_name", type=str,
-                            help="Job identifier for output (ex : chr3_graph)")
-parser_grapher.add_argument(
-    "-n", "--number_alignments", help="Gives the number of origin sequences", required=True, type=int)
+parser_grapher.add_argument("-j", "--job_name", type=str, default="pangenome_graph",
+                            help="Specifies a job name (ex : chr3_graph)")
+parser_grapher.add_argument("output", type=str,
+                            help="Path where to output the graph")
 parser_grapher.add_argument(
     "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'])
-
-## Subparser for levenshtein_distance ##
-
-parser_levenshtein: ArgumentParser = subparsers.add_parser(
-    'levenshtein', help="Evaluates identity of nodes within and across graphs.\n"
-    "Given multiple graphs, aims to compute Levenshtein distance between nodes in order to evaluate identity. This implementation is quite slow, and we moved to a quicker and more informative comparaison method (pangraphs compare) but we keep it here as it's not exactly the same information."
-)
-
-parser_levenshtein.add_argument(
-    "file", type=str, help="Path(s) to one or more gfa-like file(s).", nargs='+')
-parser_levenshtein.add_argument(
-    "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
-parser_levenshtein.add_argument("-s", "--score", help="Filters by percentage of identity",
-                                required=False, type=float, default=None)
-parser_levenshtein.add_argument(
-    "-b", "--backbone", help="Asks to hide paths within graphs.", action='store_true')
-
-## Subparser for compare_by_offset ##
-
-parser_compare: ArgumentParser = subparsers.add_parser(
-    'compare', help="Does position-based checks of segment status between graphs, following paths.\n"
-    "For each path, tries to evaluate, based on position, the existence of shifts, inclusions and equivalences between graphs using the same set of coordinates."
-)
-
-parser_compare.add_argument(
-    "file", type=str, help="Path(s) to two or more gfa-like file(s).", nargs='+')
-parser_compare.add_argument("-j", "--job_name", type=str, required=True,
-                            help="Job identifier for output (ex : chr3_graph)")
-parser_compare.add_argument("-r", "--reference", type=str, required=True,
-                            help="Path to refer to if position is ambiguous.")
-parser_compare.add_argument(
-    "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
-parser_compare.add_argument(
-    "-p", "--paths", type=str, help="Path(s) to display.", nargs='+', default=None)
-parser_compare.add_argument(
-    "-s", "--with_sequences", help="Asks to show full sequences in node info.", action='store_true')
-parser_compare.add_argument(
-    "-n", "--no_html", help="Asks to skip html graph creation", action='store_true')
-parser_compare.add_argument(
-    "-e", "--extracted", help="Asks for extracted html creation", action="store_true")
-
-
-## Subparser for gfa_convert ##
-
-parser_convert: ArgumentParser = subparsers.add_parser(
-    'convert', help="(Experimental) Attempts to convert rGFA to GFA1.\n"
-    "Converts rGFA files issued from minigraph to GFA1 compatible format. It implies to rename nodes and add P-lines if asked for. As the P-lines could not be precisely defined from the rGFA, and at is does not realign sequences on the graph, any ambiguous path will go through reference sequence."
-)
-
-parser_convert.add_argument("file", type=str, help="rGFA file")
-
-parser_convert.add_argument(
-    "-p", "--plines", help="Asks to calculate p-lines for graph", action='store_true')
-parser_convert.add_argument(
-    "-k", "--keep", help="Keeps rGFA-specific tags in output", action='store_true')
-parser_convert.add_argument(
-    "-n",
-    "--haplotypes_names",
-    help="Give one name per haplotype, ordered as the same order you did for your rGFA. First item of the list is the reference. Required if you ask for P-lines.",
-    nargs='+',
-    default=[]
-)
-
-## Subparser for length_ratios ##
-
-parser_length: ArgumentParser = subparsers.add_parser(
-    'length', help="Plot distribution of nodes lengths across graph.\n"
-    ""
-)
-
-parser_length.add_argument("file", type=str, help="gfa-like file", nargs='+')
-parser_length.add_argument("-x", "--xmax", type=int,
-                           help="maximum length size to plot. recommanded : 10000.", required=True)
-parser_length.add_argument(
-    "-g",
-    "--gfa_version",
-    help="Tells the GFA input style",
-    required=True,
-    choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'],
-    nargs='+'
-)
-
-## Subparser for extract_edit_bubbles ##
-
-parser_bubbles: ArgumentParser = subparsers.add_parser(
-    'bubbles', help="Extracts edition bubbles between two graphs"
-)
-
-parser_bubbles.add_argument("graph_1", type=str, help="gfa-like file")
-parser_bubbles.add_argument("graph_2", type=str, help="gfa-like file")
-
-parser_bubbles.add_argument(
-    "ver_1",
-    help="GFA input style",
-    choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
-)
-parser_bubbles.add_argument(
-    "ver_2",
-    help="GFA input style",
-    choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
-)
-
-## Subparser for length_ratios ##
-
-parser_vcfmatch: ArgumentParser = subparsers.add_parser(
-    'vcfmatch', help="Maps variants to graph.\n"
-    "Given a VCF file and a GFA graph, evaluates as a heatmap alignement score based on Levenshtein distance.")
-
-parser_vcfmatch.add_argument(
-    "gfa", type=str, help="Path to a gfa-like file.")
-parser_vcfmatch.add_argument(
-    "vcf", type=str, help="Path to a vcf-like file.")
-parser_vcfmatch.add_argument(
-    "-s", "--score", help="Filters by percentage of identity", required=False, type=float, default=None)
 
 ## Subparser for reconstruct_sequences ##
 
@@ -331,33 +166,6 @@ parser_reconstruct.add_argument(
 parser_reconstruct.add_argument(
     "-s", "--split", help="Tells to split in different files", action='store_true')
 
-## Subparser for map_graph_nodes ##
-
-parser_align: ArgumentParser = subparsers.add_parser(
-    'align', help="Verifies to which sequences are mapped each node of a GFA, and where. Two figures are produced : a dotgrid displaying a haplotype/segment mapping, and a alignment where segments are matched back on the linear genome."
-)
-parser_align.add_argument(
-    "gfa", type=str, help="gfa-like file")
-parser_align.add_argument(
-    "fasta", type=str, help="fasta-like file")
-parser_align.add_argument(
-    "-n", "--highlight", type=str, help="nodes to highlight in another color", nargs='+')
-
-## Subparser for create_vcf ##
-
-parser_vcf: ArgumentParser = subparsers.add_parser(
-    'vcf', help="(Experimental) Aims to extract variants from a GFA graph. Calls bubbles inside the graph and proceeds to check if node is in reference or not. If not, interprets it as a variant, and seeks a sequence it refers too. Requires PO offset (pangraphs offset) on your GFA input file.")
-parser_vcf.add_argument("file", type=str, help="Input GFA file")
-parser_vcf.add_argument("output", type=str,
-                        help="Output path for VCF (with extension)")
-parser_vcf.add_argument(
-    "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'])
-
-parser_vcf.add_argument(
-    "-c", "--chromosom", help="Name of the chromosom the graph is from", required=True, type=str)
-parser_vcf.add_argument(
-    "-r", "--reference", help="Name of the reference path inside graph", required=True, type=str)
-
 ## Subparser for edit_distance ##
 
 parser_edit: ArgumentParser = subparsers.add_parser(
@@ -389,11 +197,6 @@ def main() -> None:
     if args.subcommands == 'isolate':
         isolate(args.file, args.out, args.start, args.end,
                 args.gfa_version, args.reference)
-    elif args.subcommands == 'identify':
-        export_mapping(args.paffile, save=True, threshold=args.threshold)
-    elif args.subcommands == 'sequence':
-        isolate_sequence(args.file, args.out, args.chromosom,
-                         args.start, args.end)
     elif args.subcommands == 'offset':
         add_offsets_to_gfa(args.file, args.out, args.gfa_version)
     elif args.subcommands == 'neighborhood':
@@ -404,63 +207,19 @@ def main() -> None:
             nodes: set = bfs_step(graph, node, args.count)
             paths_step(args.file, output, nodes,
                        args.gfa_version, args.gfa_output)
-    elif args.subcommands == 'scaffold':
-        isolate_scaffolds(fasta_file=args.file, out_file=args.out,
-                          paf_file=args.paffile, chromosom=args.chromosom)
     elif args.subcommands == 'grapher':
-        pangenome_graph: MultiDiGraph = pGraph(
-            args.file,
-            args.gfa_version
-        ).compute_networkx()
+        pangenome_graph: MultiDiGraph = (pgraph := pGraph(
+            args.file, args.gfa_version, with_sequence=True)).compute_networkx()
 
-        html_graph(
-            pangenome_graph,
-            args.job_name
-        )
-    elif args.subcommands == 'levenshtein':
+        graph_stats = compute_stats(pgraph)
+
         display_graph(
-            show_identity(
-                args.file,
-                args.gfa_version,
-                get_palette(len(args.file)),
-                args.score,
-                args.backbone
-            )
+            graph=pangenome_graph,
+            name=args.job_name,
+            colors_paths=pgraph.colors,
+            annotations=graph_stats,
+            output_path=args.output
         )
-    elif args.subcommands == 'compare':
-        if len(args.file) < 2:
-            parser.error("Please specify at least two GFA files as input.")
-        if len(args.file) != len(args.gfa_version):
-            parser.error(
-                "Please match the number of args between files and gfa types.")
-
-        for i, (path, nodes, graphs, colors) in enumerate(get_backbone(args.file, args.gfa_version, args.with_sequences)):
-            datas, full_graph, score, equivalence_list = compare_positions(f"{args.job_name}_{i}" if i > 0 else f"{args.job_name}",
-                                                                           path, nodes, graphs, args.reference, path_names=args.paths)  # type: ignore
-            if not args.no_html:
-                compare_display_graph(
-                    full_graph, f"{args.job_name}_{i}" if i > 0 else f"{args.job_name}", args.paths, datas, [args.file[i], args.file[i+1]], colors, score)
-            if args.extracted:
-                purged_graph: MultiDiGraph = extract_components(
-                    full_graph, equivalence_list)
-                compare_display_graph(purged_graph, f"{args.job_name}_{i}_extracted", args.paths, datas, [
-                    args.file[i], args.file[i+1]], colors, score)
-
-    elif args.subcommands == 'convert':
-        rgfa_to_gfa(
-            args.file,
-            f"{args.file.split('.')[0]}_gfa1.gfa",
-            names_of_haplotypes=args.haplotypes_names,
-            p_lines=args.plines,
-            keep_tags=args.keep)
-    elif args.subcommands == 'length':
-        file_names: list = [filepath.split('.')[0].split('/')[-1] for filepath in args.file] if isinstance(
-            args.file, list) else [args.file.split('.')[0].split('/')[-1]]
-        lengths: list = [parse_gfa(name) for name in args.file]
-        plot_ratio(lengths, file_names, 1, args.xmax, 1)
-    elif args.subcommands == 'vcfmatch':
-        vcf_heatmap(match_nodes_to_vcf(
-            args.gfa, vcf_parser(args.vcf), args.score))
     elif args.subcommands == 'reconstruct':
         followed_paths: list = node_range(grab_paths(
             args.file, args.gfa_version, args.reference), args.start, args.stop)
@@ -475,37 +234,9 @@ def main() -> None:
                 for i, sequence in enumerate(reconstruct(args.file, args.gfa_version, followed_paths)):
                     writer.write(
                         f"> {followed_paths[i].datas['name']}\n{''.join(sequence)}\n")
-    elif args.subcommands == 'align':
-        fmap = mapper(args.gfa, args.fasta)
-        dotgrid_plot(fmap, nodes_to_highlight=args.highlight)
-
-        show_alignments(exact_mapper(args.gfa, args.fasta),
-                        get_lengths(args.fasta), nodes_to_highlight=args.highlight)
-    elif args.subcommands == 'vcf':
-        render_vcf(args.output, get_graph_structure(
-            args.file, args.gfa_version, args.reference, args.chromosom))
     elif args.subcommands == 'edit':
         perform_edition(args.file, args.gfa_version,
                         args.output_folder, args.perform_edition)
-    elif args.subcommands == 'bubbles':
-        equivalences = get_edit_bubbles(
-            args.graph_1, args.ver_1, args.graph_2, args.ver_2)
-        source_sink = extract_bubble(equivalences)
-        extraction_points = compute_extraction(source_sink)
-        graph_1: bGraph = bGraph(args.graph_1)
-        graph_2: bGraph = bGraph(args.graph_2)
-        # Extracting on both components
-        for i, ((pos_1, nb_nodes_1), (pos_2, nb_nodes_2)) in enumerate(extraction_points):
-            # On graph 1
-            output_1: str = f"{args.graph_1('.')[0]}_component{i}.gfa"
-            nodes_1: set = bfs_step(graph_1, pos_1, nb_nodes_1)
-            paths_step(args.graph_1, output_1, nodes_1,
-                       args.ver_1, args.ver_1)
-            # On graph 2
-            output_2: str = f"{args.graph_2('.')[0]}_component{i}.gfa"
-            nodes_2: set = bfs_step(graph_2, pos_2, nb_nodes_2)
-            paths_step(args.graph_2, output_2, nodes_2,
-                       args.ver_2, args.ver_2)
     else:
         print(
             "[dark_orange]Unknown command. Please use the help to see available commands.")

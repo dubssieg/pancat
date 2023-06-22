@@ -1,129 +1,104 @@
 "Creates a graph we can navigate in."
+from os import path, remove
 from argparse import ArgumentParser, SUPPRESS
-from math import log10
-from networkx import MultiDiGraph, isolates
-from mycolorpy import colorlist
+from networkx import MultiDiGraph
 from pyvis.network import Network
-from gfagraphs import Record, GfaStyle, Segment, Walk, Path, Line
+from gfagraphs import Graph
 
 
-def html_graph(graph: MultiDiGraph, job_name: str) -> None:
+def display_graph(graph: MultiDiGraph, name: str, colors_paths: dict[str, str], annotations: dict, output_path: str) -> None:
     """Creates a interactive .html file representing the given graph
 
     Args:
-        gfa_file (str): path to a rGFA file
-        debug (bool, optional): plots less nodes in graph. Defaults to False.
-        plines (bool, optional) : plots the P-lines as paths on the graph. Defaults to False.
+        graph (MultiDiGraph): a graph combining multiple pangenomes to highlight thier similarities
+        name (str): output name for graph render
+        colors_paths (dict[str, str]): a set of colors to keep path colors consistent
     """
-
     graph_visualizer = Network(
-        height='1000px', width='100%', directed=True)
+        height='1000px', width='100%', directed=True, select_menu=False, filter_menu=False, bgcolor='#ffffff')
+    graph_visualizer.set_template_dir(path.dirname(__file__), 'template.html')
     graph_visualizer.toggle_physics(True)
     graph_visualizer.from_nx(graph)
     graph_visualizer.set_edge_smooth('dynamic')
-    try:
-        graph_visualizer.show(f"{job_name}_graph.html")
-    except FileNotFoundError:
-        # Path indicated for file may not be correct regarding the lib but writes .html anyways, so ignore ^^
-        pass
+    html = graph_visualizer.generate_html()
+    legend: str = '\n'.join(
+        [f"<li><span class='{key}'></span> <a href='#'>{key}</a></li>" for key in colors_paths.keys()])
+    with open(path.join(output_path, f"{name}_tmp.html"), "w+", encoding='utf-8') as out:
+        out.write(html)
+    with open(path.join(output_path, f"{name}.html"), "w", encoding="utf-8") as html_writer:
+        with open(path.join(output_path, f"{name}_tmp.html"), "r", encoding="utf-8") as html_file:
+            for line in html_file:
+                if "<div class='sidenav'>" in line:
+                    html_writer.write(
+                        f"""{line}{''.join(["<a href='#' title=''>"+str(key)+" : <b>"+str(value)+"</b></a>" for key,value in annotations.items()])}\n<ul class='legend'>{legend}</ul>"""
+                    )
+                elif "/* your colors */" in line:
+                    html_writer.write(''.join(
+                        [".legend ."+key+" { background-color: "+val+"; }" for key, val in colors_paths.items()]))
+                else:
+                    html_writer.write(line)
+    if path.exists(f"{name}_tmp.html"):
+        remove(f"{name}_tmp.html")
 
-    with open(f"{job_name}_graph.html", "r", encoding="utf-8") as html_reader:
-        outfile = html_reader.readlines()
-        # <img src='{gfa_file.split('.')[0].split('/')[-1]}_cbar.png' align='center' rotate='90'>
-    outfile[10] = f"<h1>Graph for <b>{job_name}</b></h1>"
-    with open(f"{job_name}_graph.html", "w", encoding="utf-8") as html_writer:
-        html_writer.writelines(outfile)
 
-
-def init_graph(gfa_file: str, gfa_version: str, n_aligns: int) -> MultiDiGraph:
-    """Initializes the graph without displaying it
+def compute_stats(graph: Graph) -> dict:
+    """Computes some basic metrics for the graph
 
     Args:
-        gfa_file (str): GFA-like input file
-        gfa_version (str): user-assumed GFA subversion
-        n_aligns (int): number of distinct origin sequences
-
-    Raises:
-        ValueError: Occurs if graph specified format isn't correct given the file
-        NitImplementedError : Occurs if the function is currently not impelemented yet
+        graph (Graph): a gfagraphs Graph object
 
     Returns:
-        MultiDiGraph: a graph representing the given pangenome
+        dict: a container for metrics
     """
-    graph = MultiDiGraph()
 
-    cmap: list = colorlist.gen_color_normalized(
-        cmap="rainbow", data_arr=[i/n_aligns for i in range(n_aligns)])
+    stats: dict = {}
+    stats["Number of segments"] = len(graph.segments)
+    stats["Number of edges"] = len(graph.lines)
 
-    visited_paths: int = 0
-    version: GfaStyle = GfaStyle(gfa_version)
-    with open(gfa_file, "r", encoding="utf-8") as reader:
-        for line in reader:
-            gfa_line: Record = Record(line, gfa_version)
-            if isinstance(gfa_line, Segment):
-                graph.add_node(
-                    gfa_line.datas["name"],
-                    title=f"{gfa_line.datas['length']} bp.",
-                    size=log10(gfa_line.datas["length"]),
-                    color='darkslateblue'
-                )
-            elif isinstance(gfa_line, Walk):
-                for i in range(len(gfa_line.datas['path'])-1):
-                    left_node, left_orient = gfa_line.datas['path'][i]
-                    right_node, right_orient = gfa_line.datas['path'][i+1]
-                    graph.add_edge(
-                        left_node,
-                        right_node,
-                        title=gfa_line.datas['name'],
-                        color=cmap[visited_paths],
-                        label=f"{left_orient.value}/{right_orient.value}"
-                    )
-                visited_paths += 1
-            elif isinstance(gfa_line, Path):
-                for i in range(len(gfa_line.datas['path'])-1):
-                    left_node, left_orient = gfa_line.datas['path'][i]
-                    right_node, right_orient = gfa_line.datas['path'][i+1]
-                    graph.add_edge(
-                        left_node,
-                        right_node,
-                        title=gfa_line.datas['name'],
-                        color=cmap[visited_paths],
-                        label=f"{left_orient.value}/{right_orient.value}"
-                    )
-                visited_paths += 1
-            elif isinstance(gfa_line, Line) and version == GfaStyle.RGFA:
-                graph.add_edge(
-                    gfa_line.datas['start'],
-                    gfa_line.datas['end'],
-                    title=str(gfa_line.datas['origin']),
-                    color=cmap[int(gfa_line.datas['origin'])],
-                    label=gfa_line.datas['orientation']
-                )
-    graph.remove_nodes_from(list(isolates(graph)))
-    return graph
+    nb_seg_sub50: int = 0
+    nb_seg_sup50: int = 0
+    size_seg_sub50: int = 0
+    size_seg_sup50: int = 0
+
+    for seg in graph.segments:
+        if (size := len(seg.datas['seq'])) < 50:
+            nb_seg_sub50 += 1
+            size_seg_sub50 += size
+        else:
+            nb_seg_sup50 += 1
+            size_seg_sup50 += size
+
+    stats["Number of segments >=50bp"] = nb_seg_sup50
+    stats["Number of segments <50bp"] = nb_seg_sub50
+    stats["Length of segments >=50bp"] = size_seg_sup50
+    stats["Length of segments <50bp"] = size_seg_sub50
+
+    return stats
 
 
 if __name__ == "__main__":
 
     parser = ArgumentParser(add_help=False)
     parser.add_argument("file", type=str, help="Path to a gfa-like file")
-    parser.add_argument("job_name", type=str,
-                        help="Job identifier for output (ex : chr3_graph)")
+    parser.add_argument("-j", "--job_name", type=str, default="pangenome_graph",
+                        help="Specifies a job name (ex : chr3_graph)")
     parser.add_argument('-h', '--help', action='help', default=SUPPRESS,
                         help='Creates a representation of a pangenome graph.')
-    parser.add_argument(
-        "-n", "--number_alignments", help="Gives the number of origin sequences", required=True, type=int)
+    parser.add_argument("output", type=str,
+                        help="Path where to output the graph")
     parser.add_argument(
         "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'])
     args = parser.parse_args()
 
-    pangenome_graph: MultiDiGraph = init_graph(
-        gfa_file=args.file,
-        gfa_version=args.gfa_version,
-        n_aligns=args.number_alignments
-    )
+    pangenome_graph: MultiDiGraph = (pgraph := Graph(
+        args.file, args.gfa_version, with_sequence=True)).compute_networkx()
 
-    html_graph(
-        pangenome_graph,
-        args.job_name
+    graph_stats = compute_stats(pgraph)
+
+    display_graph(
+        graph=pangenome_graph,
+        name=args.job_name,
+        colors_paths=pgraph.colors,
+        annotations=graph_stats,
+        output_path=args.output
     )

@@ -2,49 +2,13 @@
 from itertools import combinations, accumulate, chain
 from argparse import ArgumentParser, SUPPRESS
 from collections import Counter
-from os import path, remove
+from os import path
 from pathlib import Path
 from copy import deepcopy
 from indexed import IndexedOrderedDict
-from pyvis.network import Network
-from networkx import MultiDiGraph
 from gfagraphs import Graph
 from tharospytools import revcomp
-
-
-def display_graph(graph: MultiDiGraph, name: str, colors_paths: dict[str, str], annotations: dict, output_path: str) -> None:
-    """Creates a interactive .html file representing the given graph
-
-    Args:
-        graph (MultiDiGraph): a graph combining multiple pangenomes to highlight thier similarities
-        name (str): output name for graph render
-        colors_paths (dict[str, str]): a set of colors to keep path colors consistent
-    """
-    graph_visualizer = Network(
-        height='1000px', width='100%', directed=True, select_menu=False, filter_menu=False, bgcolor='#ffffff')
-    graph_visualizer.set_template_dir(path.dirname(__file__), 'template.html')
-    graph_visualizer.toggle_physics(True)
-    graph_visualizer.from_nx(graph)
-    graph_visualizer.set_edge_smooth('dynamic')
-    html = graph_visualizer.generate_html()
-    legend: str = '\n'.join(
-        [f"<li><span class='{key}'></span> <a href='#'>{key}</a></li>" for key in colors_paths.keys()])
-    with open(path.join(output_path, f"{name}_tmp.html"), "w+", encoding='utf-8') as out:
-        out.write(html)
-    with open(path.join(output_path, f"{name}.html"), "w", encoding="utf-8") as html_writer:
-        with open(path.join(output_path, f"{name}_tmp.html"), "r", encoding="utf-8") as html_file:
-            for line in html_file:
-                if "<div class='sidenav'>" in line:
-                    html_writer.write(
-                        f"""{line}{''.join(["<a href='#' title=''>"+str(key)+" : <b>"+str(value)+"</b></a>" for key,value in annotations.items()])}\n<ul class='legend'>{legend}</ul>"""
-                    )
-                elif "/* your colors */" in line:
-                    html_writer.write(''.join(
-                        [".legend ."+key+" { background-color: "+val+"; }" for key, val in colors_paths.items()]))
-                else:
-                    html_writer.write(line)
-    if path.exists(f"{name}_tmp.html"):
-        remove(f"{name}_tmp.html")
+from scripts.grapher import display_graph
 
 
 class EditEvent():
@@ -772,6 +736,8 @@ def perform_edition(
     Raises:
         ValueError: files and gfa versions argument error
     """
+    # In this function, we do calculate the distance between G1 and G2, by trying to modify G2 into G1.
+    # Note the two graphs can be freely swapped, we just need to invert scores
 
     # Handling input errors
     if len(files) < 2:
@@ -823,25 +789,25 @@ def perform_edition(
                 for key, value in dipath.edition.items():
                     required_merges += max(0, len(value)-1)
                     relations_counter.update([type(val) for val in value])
-                    # value is a list of EditEvent
+                    # Variable value is a list of EditEvent
                     edits: str = ','.join(
                         [f"{val},{val.offsets_ref},{val.offsets_target}" for val in value])
                     output.write(
-                        f"{dipath.alignment_name},{key},{edits}\n")
+                        f"{dipath.alignment_name}\t{key}\t{edits}\n")
             output.write(f"Required merges : {required_merges}")
             output.write(
                 f"Required splits : {relations_counter[OverlapPrefixSuffix]+relations_counter[SuperPrefix]+relations_counter[SuperString]}")
             output.write(str(relations_counter))
+
             # If we ask to compute edition, we do it
             if do_edition:
 
-                edited, merges, splits = edit_by_paths(
+                edited, _, _ = edit_by_paths(
                     graph2, all_dipaths, output_folder, do_plot)
 
                 edited.save_graph(path.join(
                     output_folder, f"edited_graph_{Path(file_1).stem}_{Path(file_2).stem}.gfa"))
 
-                output.write(f"merges:{merges},splits:{splits}\n")
             del graph1, graph2
 
 

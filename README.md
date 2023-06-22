@@ -1,10 +1,14 @@
-[![](https://img.shields.io/badge/Python-3.10-blue.svg)]()
-[![](https://img.shields.io/badge/Documentation-unfinished-orange.svg)]()
+[![](https://img.shields.io/badge/python-3.10-blue.svg)]()
+[![](https://img.shields.io/badge/python-3.11-blue.svg)]()
+[![](https://img.shields.io/badge/documentation-unfinished-orange.svg)]()
+[![](https://img.shields.io/badge/wiki-nonexistent-red.svg)]()
+[![](https://img.shields.io/badge/comments-unfinished-orange.svg)]()
 [![](https://img.shields.io/badge/build-passing-green.svg)]()
 
 # PANGRAPHS - GFA visualisation and exploration
 
 Implementations of many functions for performing various actions on GFA-like graphs in a command-line tool, such as extracting or offseting a pangenome graph. Is capable of comparing graphs topology between graphs that happen to contain the same set of sequences. Does pangenome graphs visualisation with interactive html files.
+Uses the [gfagraphs library](https://pypi.org/project/gfagraphs/) to load and manipulate pangenome graphs.
 
 <p align="center">
   <img src="toy_examples/graph_2.png" width="100%" />
@@ -13,6 +17,12 @@ Implementations of many functions for performing various actions on GFA-like gra
 ## Installation
 
 Requires **python >=3.10**.
+
+```bash
+git clone git@github.com:Tharos-ux/pangraphs.git
+cd pangraphs
+python -m pip install . --quiet
+```
 
 You can install pangraphs by running `python setup.py install`, which will enlable command-line usage of the program.
 

@@ -50,7 +50,7 @@ def paths_step(origin_file: str, file_to_edit: str, extracted_nodes: set, gfa_ve
                     embed_paths += [Record(line, gfa_version)]
                 elif x[0] == 'H':
                     gfa_writer.write(line)
-    for i, path in enumerate(embed_paths):
+    for j, path in enumerate(embed_paths):
         path.datas["path"] = deque(
             path.datas["path"], maxlen=len(path.datas["path"]))
         try:
@@ -60,7 +60,7 @@ def paths_step(origin_file: str, file_to_edit: str, extracted_nodes: set, gfa_ve
                 _ = path.datas["path"].pop()
         except IndexError:
             # No node inside path is in set, removing path
-            embed_paths[i] = None  # type: ignore
+            embed_paths[j] = None  # type: ignore
     match output_type:
         case GfaStyle.GFA1:
             with open(file_to_edit, 'a', encoding='utf-8') as gfa_writer:
