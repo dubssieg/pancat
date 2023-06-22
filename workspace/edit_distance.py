@@ -8,7 +8,7 @@ from copy import deepcopy
 from indexed import IndexedOrderedDict
 from gfagraphs import Graph
 from tharospytools import revcomp
-from scripts.grapher import display_graph
+from workspace.grapher import display_graph
 
 
 class EditEvent():

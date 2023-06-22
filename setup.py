@@ -16,7 +16,7 @@ with open("requirements.txt", "r", encoding='utf-8') as fh:
 
 setup(
     name=NAME,
-    version='0.0.1',
+    version='0.1.0',
     description='Tools for manipulating and visualising GFA file format',
     url='https://github.com/Tharos-ux/gfatypes',
     author='Tharos',
@@ -29,5 +29,5 @@ setup(
     long_description=open("README.md", encoding='utf-8').read(),
     long_description_content_type='text/markdown',
     install_requires=requirements,
-    entry_points={'console_scripts': ['pangraphs=scripts.main:main']}
+    entry_points={'console_scripts': ['pangraphs=workspace.main:main']}
 )
