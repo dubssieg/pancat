@@ -15,7 +15,7 @@ Uses the [gfagraphs library](https://pypi.org/project/gfagraphs/) to load and ma
 Requires **python >=3.10**.
 
 ```bash
-git clone git@github.com:Tharos-ux/pangraphs.git
+git clone https://github.com/Tharos-ux/pangraphs.git
 cd pangraphs
 python -m pip install . --quiet
 ```

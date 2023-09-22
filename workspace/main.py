@@ -95,6 +95,8 @@ parser_grapher: ArgumentParser = subparsers.add_parser(
 parser_grapher.add_argument("file", type=str, help="Path to a gfa-like file")
 parser_grapher.add_argument("output", type=str,
                             help="Output path for the html graph file.")
+parser_grapher.add_argument(
+    "-b", "--boundaries", type=int, help="One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp and one for nodes in range 2001-inf bp).", nargs='+')
 
 ## Subparser for stats ##
 
@@ -217,6 +219,8 @@ def main() -> None:
         )
         exit()
     gfa_version_info: str | list[str] = get_gfa_subtype(args.file)
+    print(
+        f"Working on file(s) {args.file} of respective detected formats {gfa_version_info}")
     if args.subcommands == 'isolate':
         isolate(args.file, args.out, args.start, args.end,
                 gfa_version_info, args.reference)
@@ -237,11 +241,17 @@ def main() -> None:
         for key, value in graph_stats.items():
             print(f"{key}: {value}")
     elif args.subcommands == 'grapher':
+        bounds: list = []
+        boundaries = [
+            0] + [bound+x for bound in args.boundaries for x in [0, 1]] + [float('inf')]
+        for i in range(0, len(boundaries), 2):
+            x = i
+            bounds.append([boundaries[x], boundaries[x+1]])
+
         pangenome_graph: MultiDiGraph = (pgraph := pGraph(
-            args.file, gfa_version_info, with_sequence=True)).compute_networkx()
+            args.file, gfa_version_info, with_sequence=True)).compute_networkx(node_size_classes=tuple(bounds))
 
-        graph_stats = compute_stats(pgraph)
-
+        graph_stats = compute_stats(pgraph, length_classes=tuple(bounds))
         display_graph(
             graph=pangenome_graph,
             colors_paths=pgraph.colors,

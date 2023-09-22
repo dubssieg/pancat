@@ -15,6 +15,7 @@ def display_graph(graph: MultiDiGraph, colors_paths: dict[str, str], annotations
         name (str): output name for graph render
         colors_paths (dict[str, str]): a set of colors to keep path colors consistent
     """
+    print(colors_paths)
     output_path: str = path_allocator(
         output_path, particle='.html', default_name='graph')
     output_path_temp: str = path_allocator(
@@ -46,7 +47,8 @@ def display_graph(graph: MultiDiGraph, colors_paths: dict[str, str], annotations
         remove(output_path_temp)
 
 
-def compute_stats(graph: Graph) -> dict:
+def compute_stats(graph: Graph, length_classes: tuple[list] = ([0, 1], [2, 10], [11, 50], [51, 200],
+                                                               [201, 500], [501, 1000], [1001, 10000], [10001, float('inf')])) -> dict:
     """Computes some basic metrics for the graph
 
     Args:
@@ -60,24 +62,22 @@ def compute_stats(graph: Graph) -> dict:
     stats["Number of segments"] = len(graph.segments)
     stats["Number of edges"] = len(graph.lines)
 
-    nb_seg_sub50: int = 0
-    nb_seg_sup50: int = 0
-    size_seg_sub50: int = 0
-    size_seg_sup50: int = 0
-
+    # segment_sizes[size_class] = [number,cum_length]
+    segment_sizes: dict = {x: [0, 0] for x in range(len(length_classes))}
+    total_size: int = 0
     for seg in graph.segments:
-        if (size := len(seg.datas['seq'])) < 50:
-            nb_seg_sub50 += 1
-            size_seg_sub50 += size
-        else:
-            nb_seg_sup50 += 1
-            size_seg_sup50 += size
-
-    stats["Number of segments >=50bp"] = nb_seg_sup50
-    stats["Number of segments <50bp"] = nb_seg_sub50
-    stats["Length of segments >=50bp"] = size_seg_sup50
-    stats["Length of segments <50bp"] = size_seg_sub50
-
+        size = len(seg.datas['seq'])
+        for x in segment_sizes.keys():
+            low_bound, high_bound = length_classes[x]
+            if size >= low_bound and size <= high_bound:
+                segment_sizes[x] = [segment_sizes[x]
+                                    [0]+1, segment_sizes[x][1]+size]
+                total_size += size
+    for x, (number, cum_size) in segment_sizes.items():
+        low_bound, high_bound = length_classes[x]
+        stats[f'Number of {low_bound} bp - {high_bound} bp'] = f"{number} ({round((number/len(graph.segments))*100,ndigits=2)}%)"
+        stats[f'Size of {low_bound} bp - {high_bound} bp'] = f"{cum_size} ({round((cum_size/total_size)*100,ndigits=2)}%)"
+    stats["Total size of segments"] = total_size
     return stats
 
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     pangenome_graph: MultiDiGraph = (pgraph := Graph(
-        args.file, args.gfa_version, with_sequence=True)).compute_networkx()
+        args.file, with_sequence=True)).compute_networkx()
 
     graph_stats = compute_stats(pgraph)
 
