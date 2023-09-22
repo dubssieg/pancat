@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser
 from sys import argv
+from os.path import exists
+from os import stat
 from networkx import MultiDiGraph
 from BubbleGun.Graph import Graph as bGraph
-from gfagraphs import Graph as pGraph
+from gfagraphs import Graph as pGraph, supplementary_datas
 from workspace.isolate_by_range import isolate
 from workspace.offset_in_gfa import add_offsets_to_gfa
 from workspace.paths_bubblegun_bfs import bfs_step, paths_step
@@ -35,13 +37,6 @@ parser_isolate.add_argument("file", type=str, help="Path to a gfa-like file")
 parser_isolate.add_argument(
     "out", type=str, help="Output path (with extension)")
 parser_isolate.add_argument(
-    "-g",
-    "--gfa_version",
-    help="Tells the GFA input style",
-    required=True,
-    choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
-)
-parser_isolate.add_argument(
     '-s',
     '--start',
     type=int,
@@ -69,13 +64,6 @@ parser_offset: ArgumentParser = subparsers.add_parser(
 parser_offset.add_argument("file", type=str, help="Path to a gfa-like file")
 parser_offset.add_argument(
     "out", type=str, help="Output path (with extension)")
-parser_offset.add_argument(
-    "-g",
-    "--gfa_version",
-    help="Tells the GFA input style",
-    required=True,
-    choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
-)
 
 ## Subparser for paths_bubblegun_bfs ##
 
@@ -87,20 +75,6 @@ parser_neighborhood.add_argument(
     "file", type=str, help="Path to a gfa-like file")
 parser_neighborhood.add_argument(
     "out", type=str, help="Output path (with extension)")
-parser_neighborhood.add_argument(
-    "-g",
-    "--gfa_version",
-    help="Tells the GFA input style",
-    required=True,
-    choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
-)
-parser_neighborhood.add_argument(
-    "-o",
-    "--gfa_output",
-    help="Tells the GFA output style",
-    required=True,
-    choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
-)
 parser_neighborhood.add_argument(
     '-s',
     '--start_node',
@@ -123,8 +97,6 @@ parser_grapher.add_argument("-j", "--job_name", type=str, default="pangenome_gra
                             help="Specifies a job name (ex : chr3_graph)")
 parser_grapher.add_argument("output", type=str,
                             help="Path where to output the graph")
-parser_grapher.add_argument(
-    "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'])
 
 ## Subparser for reconstruct_sequences ##
 
@@ -137,13 +109,6 @@ parser_reconstruct.add_argument(
     "file", type=str, help="Path to a gfa-like file")
 parser_reconstruct.add_argument(
     "out", type=str, help="Output path (without extension)")
-parser_reconstruct.add_argument(
-    "-g",
-    "--gfa_version",
-    help="Tells the GFA input style",
-    required=True,
-    choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
-)
 parser_reconstruct.add_argument(
     "-r",
     "--reference",
@@ -176,14 +141,66 @@ parser_edit.add_argument(
 parser_edit.add_argument(
     "-o", "--output_folder", required=True, type=str, help="Path to a folder for results.")
 parser_edit.add_argument(
-    "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'], nargs='+')
-parser_edit.add_argument(
     "-p", "--perform_edition", help="Asks to perform edition on graph and outputs it.", action='store_true')
 
 
 #######################################
 
 args = parser.parse_args()
+
+
+def get_gfa_subtype(gfa_file_path: str | list[str]) -> str | list[str]:
+    """Given a file, or more, returns the gfa subtypes, and raises error if file is invalid or does not exists
+
+    Args:
+        gfa_file_path (str | list[str]): one or more file paths
+
+    Returns:
+        str | list[str]: a gfa subtype descriptor per input file
+    """
+    styles: list[str] = list()
+    if isinstance(gfa_file_path, str):
+        gfa_file_path = [gfa_file_path]
+    for gfa_file in gfa_file_path:
+        # Checking if path exists
+        if not exists(gfa_file):
+            raise OSError(
+                "Specified file does not exists. Please check provided path."
+            )
+        # Checking if file descriptor is valid
+        if not gfa_file.endswith('.gfa'):
+            raise IOError(
+                "File descriptor is invalid. Please check format, this lib is designed to work with Graphical Fragment Assembly (GFA) files."
+            )
+        # Checking if file is not empty
+        if stat(gfa_file).st_size == 0:
+            raise IOError(
+                "File is empty."
+            )
+        with open(gfa_file, 'r', encoding='utf-8') as gfa_reader:
+            header: str = gfa_reader.readline()
+            if header[0] != 'H':
+                styles.append('rGFA')
+            else:
+                try:
+                    version_number: str = supplementary_datas(
+                        header.strip('\n').split('\t'), 1
+                    )["VN"]
+                    if version_number == '1.0':
+                        styles.append('GFA1')
+                    elif version_number == '1.1':
+                        styles.append('GFA1.1')
+                    elif version_number == '1.2':
+                        styles.append('GFA1.2')
+                    elif version_number == '2.0':
+                        styles.append('GFA2')
+                    else:
+                        styles.append('unknown')
+                except KeyError:
+                    styles.append('rGFA')
+    if len(styles) == 1:
+        return styles[0]
+    return styles
 
 
 def main() -> None:
@@ -194,11 +211,12 @@ def main() -> None:
             "Try to use -h or --help to get list of available commands."
         )
         exit()
+    gfa_version_info: str | list[str] = get_gfa_subtype(args.file)
     if args.subcommands == 'isolate':
         isolate(args.file, args.out, args.start, args.end,
-                args.gfa_version, args.reference)
+                gfa_version_info, args.reference)
     elif args.subcommands == 'offset':
-        add_offsets_to_gfa(args.file, args.out, args.gfa_version)
+        add_offsets_to_gfa(args.file, args.out, gfa_version_info)
     elif args.subcommands == 'neighborhood':
         graph: bGraph = bGraph(args.file)
         for i, node in enumerate(args.start_node):
@@ -206,10 +224,10 @@ def main() -> None:
                 args.start_node) > 1 else args.out
             nodes: set = bfs_step(graph, node, args.count)
             paths_step(args.file, output, nodes,
-                       args.gfa_version, args.gfa_output)
+                       gfa_version_info, gfa_version_info)
     elif args.subcommands == 'grapher':
         pangenome_graph: MultiDiGraph = (pgraph := pGraph(
-            args.file, args.gfa_version, with_sequence=True)).compute_networkx()
+            args.file, gfa_version_info, with_sequence=True)).compute_networkx()
 
         graph_stats = compute_stats(pgraph)
 
@@ -222,20 +240,20 @@ def main() -> None:
         )
     elif args.subcommands == 'reconstruct':
         followed_paths: list = node_range(grab_paths(
-            args.file, args.gfa_version, args.reference), args.start, args.stop)
+            args.file, gfa_version_info, args.reference), args.start, args.stop)
 
         if args.split:
-            for i, sequence in enumerate(reconstruct(args.file, args.gfa_version, followed_paths)):
+            for i, sequence in enumerate(reconstruct(args.file, gfa_version_info, followed_paths)):
                 with open(f"{args.out}_{i}.fasta", "w", encoding="utf-8") as writer:
                     writer.write(
                         f"> {followed_paths[i].datas['name']}\n{''.join(sequence)}\n")
         else:
             with open(f"{args.out}.fasta", "w", encoding="utf-8") as writer:
-                for i, sequence in enumerate(reconstruct(args.file, args.gfa_version, followed_paths)):
+                for i, sequence in enumerate(reconstruct(args.file, gfa_version_info, followed_paths)):
                     writer.write(
                         f"> {followed_paths[i].datas['name']}\n{''.join(sequence)}\n")
     elif args.subcommands == 'edit':
-        perform_edition(args.file, args.gfa_version,
+        perform_edition(args.file, gfa_version_info,
                         args.output_folder, args.perform_edition)
     else:
         print(
