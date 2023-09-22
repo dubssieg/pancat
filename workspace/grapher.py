@@ -15,7 +15,6 @@ def display_graph(graph: MultiDiGraph, colors_paths: dict[str, str], annotations
         name (str): output name for graph render
         colors_paths (dict[str, str]): a set of colors to keep path colors consistent
     """
-    print(colors_paths)
     output_path: str = path_allocator(
         output_path, particle='.html', default_name='graph')
     output_path_temp: str = path_allocator(
