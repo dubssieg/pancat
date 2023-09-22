@@ -96,6 +96,13 @@ parser_grapher.add_argument("file", type=str, help="Path to a gfa-like file")
 parser_grapher.add_argument("output", type=str,
                             help="Output path for the html graph file.")
 
+## Subparser for stats ##
+
+parser_stats: ArgumentParser = subparsers.add_parser(
+    'stats', help="Retrieves basic stats on a pangenome graph.")
+
+parser_stats.add_argument("file", type=str, help="Path to a gfa-like file")
+
 ## Subparser for reconstruct_sequences ##
 
 parser_reconstruct: ArgumentParser = subparsers.add_parser(
@@ -223,6 +230,12 @@ def main() -> None:
             nodes: set = bfs_step(graph, node, args.count)
             paths_step(args.file, output, nodes,
                        gfa_version_info, gfa_version_info)
+    elif args.subcommands == 'stats':
+        pangenome_graph: MultiDiGraph = (pgraph := pGraph(
+            args.file, gfa_version_info, with_sequence=True)).compute_networkx()
+        graph_stats = compute_stats(pgraph)
+        for key, value in graph_stats.items():
+            print(f"{key}: {value}")
     elif args.subcommands == 'grapher':
         pangenome_graph: MultiDiGraph = (pgraph := pGraph(
             args.file, gfa_version_info, with_sequence=True)).compute_networkx()
