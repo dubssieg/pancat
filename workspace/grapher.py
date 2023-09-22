@@ -4,9 +4,10 @@ from argparse import ArgumentParser, SUPPRESS
 from networkx import MultiDiGraph
 from pyvis.network import Network
 from gfagraphs import Graph
+from tharospytools import path_allocator
 
 
-def display_graph(graph: MultiDiGraph, name: str, colors_paths: dict[str, str], annotations: dict, output_path: str) -> None:
+def display_graph(graph: MultiDiGraph, colors_paths: dict[str, str], annotations: dict, output_path: str) -> None:
     """Creates a interactive .html file representing the given graph
 
     Args:
@@ -14,6 +15,10 @@ def display_graph(graph: MultiDiGraph, name: str, colors_paths: dict[str, str], 
         name (str): output name for graph render
         colors_paths (dict[str, str]): a set of colors to keep path colors consistent
     """
+    output_path: str = path_allocator(
+        output_path, particle='.html', default_name='graph')
+    output_path_temp: str = path_allocator(
+        output_path, particle='.tmp.html', default_name='graph')
     graph_visualizer = Network(
         height='1000px', width='100%', directed=True, select_menu=False, filter_menu=False, bgcolor='#ffffff')
     graph_visualizer.set_template_dir(path.dirname(__file__), 'template.html')
@@ -23,10 +28,10 @@ def display_graph(graph: MultiDiGraph, name: str, colors_paths: dict[str, str], 
     html = graph_visualizer.generate_html()
     legend: str = '\n'.join(
         [f"<li><span class='{key}'></span> <a href='#'>{key}</a></li>" for key in colors_paths.keys()])
-    with open(path.join(output_path, f"{name}_tmp.html"), "w+", encoding='utf-8') as out:
+    with open(output_path_temp, "w+", encoding='utf-8') as out:
         out.write(html)
-    with open(path.join(output_path, f"{name}.html"), "w", encoding="utf-8") as html_writer:
-        with open(path.join(output_path, f"{name}_tmp.html"), "r", encoding="utf-8") as html_file:
+    with open(output_path, "w", encoding="utf-8") as html_writer:
+        with open(output_path_temp, "r", encoding="utf-8") as html_file:
             for line in html_file:
                 if "<div class='sidenav'>" in line:
                     html_writer.write(
@@ -37,8 +42,8 @@ def display_graph(graph: MultiDiGraph, name: str, colors_paths: dict[str, str], 
                         [".legend ."+key+" { background-color: "+val+"; }" for key, val in colors_paths.items()]))
                 else:
                     html_writer.write(line)
-    if path.exists(f"{name}_tmp.html"):
-        remove(f"{name}_tmp.html")
+    if path.exists(output_path_temp):
+        remove(output_path_temp)
 
 
 def compute_stats(graph: Graph) -> dict:
@@ -80,12 +85,10 @@ if __name__ == "__main__":
 
     parser = ArgumentParser(add_help=False)
     parser.add_argument("file", type=str, help="Path to a gfa-like file")
-    parser.add_argument("-j", "--job_name", type=str, default="pangenome_graph",
-                        help="Specifies a job name (ex : chr3_graph)")
     parser.add_argument('-h', '--help', action='help', default=SUPPRESS,
                         help='Creates a representation of a pangenome graph.')
     parser.add_argument("output", type=str,
-                        help="Path where to output the graph")
+                        help="Output path for the html graph file.")
     parser.add_argument(
         "-g", "--gfa_version", help="Tells the GFA input style", required=True, choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2'])
     args = parser.parse_args()
@@ -97,7 +100,6 @@ if __name__ == "__main__":
 
     display_graph(
         graph=pangenome_graph,
-        name=args.job_name,
         colors_paths=pgraph.colors,
         annotations=graph_stats,
         output_path=args.output

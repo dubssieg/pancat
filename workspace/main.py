@@ -93,10 +93,8 @@ parser_grapher: ArgumentParser = subparsers.add_parser(
     "Huge graphs may take long time to display, or might be messy. Advice would be to extract parts you want to display (with pangraphs isolate or pangraphs neighborhood for instance), then computes the vizualisation on the selected part.")
 
 parser_grapher.add_argument("file", type=str, help="Path to a gfa-like file")
-parser_grapher.add_argument("-j", "--job_name", type=str, default="pangenome_graph",
-                            help="Specifies a job name (ex : chr3_graph)")
 parser_grapher.add_argument("output", type=str,
-                            help="Path where to output the graph")
+                            help="Output path for the html graph file.")
 
 ## Subparser for reconstruct_sequences ##
 
@@ -233,7 +231,6 @@ def main() -> None:
 
         display_graph(
             graph=pangenome_graph,
-            name=args.job_name,
             colors_paths=pgraph.colors,
             annotations=graph_stats,
             output_path=args.output
