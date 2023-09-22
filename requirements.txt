@@ -5,7 +5,6 @@ pyvis
 networkx
 mycolorpy
 levenshtein
-gfatypes
 gfagraphs
 tharos-pytools
 BubbleGun

@@ -17,6 +17,7 @@ Requires **python >=3.10**.
 ```bash
 git clone https://github.com/Tharos-ux/pangraphs.git
 cd pangraphs
+pip install -r requirements.txt --upgrade
 python -m pip install . --quiet
 ```
 
