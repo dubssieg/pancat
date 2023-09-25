@@ -1,0 +1,82 @@
+#distribution based on: debian 10.13
+Bootstrap:docker
+From:debian:10.13-slim
+
+# container for
+# Build:
+# sudo singularity build pangraphs_v0.1.1.sif receipe.def
+
+%environment
+export LC_ALL=C
+export LC_NUMERIC=en_GB.UTF-8
+export PATH="/opt/miniconda/bin:$PATH"
+
+#%labels
+#MAINTENER Jacques Lagnel
+#VERSION 1.1
+#LICENSE MIT
+#DATE_MODIF 19/09/2023
+#PACKAGE pangraphs
+
+%help
+Container for pangraphs
+PANGRAPHS - GFA visualisation and exploration
+Implementations of many functions for performing various actions on GFA-like graphs in a command-line tool, such as extracting or offseting a pangenome graph. Is capable of comparing graphs topology between graphs that happen to contain the same set of sequences. Does pangenome graphs visualisation with interactive html files. Uses the gfagraphs library to load and manipulate pangenome graphs.
+
+https://github.com/Tharos-ux/pangraphs/tree/main
+
+Version: pangraphs 0.1.1
+
+Package installation using Miniconda3 23.5.2 python 3.11
+All packages are in /opt/miniconda/bin & are in PATH
+
+Default runscript: pangraphs
+
+Usage:
+    pangraphs_v0.1.1.sif -h
+    modules usage:
+    singularity exec pangraphs.sif pangraphs grapher toy.gfa outpath
+
+%runscript
+    #default runscript: java passing all arguments from cli: $@
+    exec /opt/miniconda/bin/pangraphs "$@"
+
+%post
+
+    #essential stuff but minimal
+    apt update
+    #for security fixe:
+    apt upgrade -y
+    apt install -y wget bzip2 git
+    DEBIAN_FRONTEND=noninteractive apt install -y apt-utils wget bzip2 git locales
+
+    #install conda
+    cd /opt
+    rm -fr miniconda
+
+    #miniconda3: get miniconda3 version 4.7.12
+    #wget https://repo.continuum.io/miniconda/Miniconda3-4.7.12-Linux-x86_64.sh -O miniconda.sh
+    wget https://repo.anaconda.com/miniconda/Miniconda3-py311_23.5.2-0-Linux-x86_64.sh -O miniconda.sh
+
+    #install conda
+    bash miniconda.sh -b -p /opt/miniconda
+    export PATH="/opt/miniconda/bin:$PATH"
+    #add channels
+    conda config --add channels defaults
+    conda config --add channels conda-forge
+    #conda config --add channels bioconda
+
+    #install varscan
+    conda install -y pip
+    cd /opt
+    git clone https://github.com/Tharos-ux/pangraphs.git
+    cd /opt/pangraphs
+    pip install indexed
+    python -m pip install .
+
+    #cleanup
+    conda clean -y --all
+    rm -f /opt/miniconda.sh
+    apt autoremove --purge
+    apt clean
+
