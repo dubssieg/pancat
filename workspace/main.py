@@ -96,7 +96,7 @@ parser_grapher.add_argument("file", type=str, help="Path to a gfa-like file")
 parser_grapher.add_argument("output", type=str,
                             help="Output path for the html graph file.")
 parser_grapher.add_argument(
-    "-b", "--boundaries", type=int, help="One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp and one for nodes in range 2001-inf bp).", nargs='+')
+    "-b", "--boundaries", type=int, help="One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp and one for nodes in range 2001-inf bp).", nargs='+', default=[50])
 
 ## Subparser for stats ##
 
@@ -104,6 +104,8 @@ parser_stats: ArgumentParser = subparsers.add_parser(
     'stats', help="Retrieves basic stats on a pangenome graph.")
 
 parser_stats.add_argument("file", type=str, help="Path to a gfa-like file")
+parser_stats.add_argument(
+    "-b", "--boundaries", type=int, help="One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp and one for nodes in range 2001-inf bp).", nargs='+', default=[50])
 
 ## Subparser for reconstruct_sequences ##
 
@@ -235,9 +237,17 @@ def main() -> None:
             paths_step(args.file, output, nodes,
                        gfa_version_info, gfa_version_info)
     elif args.subcommands == 'stats':
-        pangenome_graph: MultiDiGraph = (pgraph := pGraph(
-            args.file, gfa_version_info, with_sequence=True)).compute_networkx()
-        graph_stats = compute_stats(pgraph)
+        pgraph: pGraph = pGraph(
+            args.file, gfa_version_info, with_sequence=True)
+        bounds: list = []
+        boundaries = [
+            0] + [bound+x for bound in args.boundaries for x in [0, 1]] + [float('inf')]
+        for i in range(0, len(boundaries), 2):
+            x = i
+            bounds.append([boundaries[x], boundaries[x+1]])
+
+        graph_stats = compute_stats(pgraph, length_classes=tuple(bounds))
+
         for key, value in graph_stats.items():
             print(f"{key}: {value}")
     elif args.subcommands == 'grapher':
