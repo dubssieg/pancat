@@ -379,7 +379,7 @@ class PathEdit:
                 query_end: int = query_endpos[idx_query+1]
 
                 if reference_end == query_end and reference_start == query_start:
-                    # No edition to be made, its an equivalence
+                    # No edition to be made, it's an equivalence
                     edit_list.append(
                         String(
                             self.reference_path.keys()[idx_reference],
@@ -617,13 +617,10 @@ def edit_by_paths(
                 if type(edition_event) in [SuperPrefix, OverlapPrefixSuffix, SuperString]:
                     negative_edits -= 1
                     # We want alternate positions for not erasing nodes in specific cases
-                    if type(edition_event) in [OverlapPrefixSuffix, SuperString]:
-                        nodes_names: list = [
-                            f'{negative_edits}', edition_event.target_node]
-                    else:
-                        # I do deserve hell for this
-                        nodes_names: list = [
-                            f'{negative_edits}', edition_event.target_node][::-1]
+                    # I do deserve hell for this
+                    nodes_names: list = [
+                        f'{negative_edits}', edition_event.target_node
+                    ][::-(type(edition_event) not in [OverlapPrefixSuffix, SuperString]) or 1]
                     # Left border of node
                     future_split = graph_to_edit.get_segment(
                         edition_event.target_node)
@@ -760,6 +757,7 @@ def perform_edition(
 
         # Iterating over paths
         for dpath in paths:
+            print(f"Working on {dpath}...")
             path_in_g1 = graph1.get_path(dpath)
             path_in_g2 = graph2.get_path(dpath)
 
@@ -779,9 +777,7 @@ def perform_edition(
         for dipath in all_dipaths:
             total_counts += dipath.counts
 
-        with open(path.join(output_folder, f"out_{i}.log"), "w", encoding='utf-8') as output:
-            # output.write(','.join([f"{t}:{v}" for t, v in total_counts.items()])+'\n')
-
+        with open(path.join(output_folder, f"out_{Path(file_1).stem}_against_{Path(file_2).stem}_{i}.log"), "w", encoding='utf-8') as output:
             # Write edited stuff in log
             relations_counter: Counter = Counter()
             required_merges: int = 0
@@ -794,9 +790,9 @@ def perform_edition(
                         [f"{val},{val.offsets_ref},{val.offsets_target}" for val in value])
                     output.write(
                         f"{dipath.alignment_name}\t{key}\t{edits}\n")
-            output.write(f"Required merges : {required_merges}")
+            output.write(f"Required merges : {required_merges} ")
             output.write(
-                f"Required splits : {relations_counter[OverlapPrefixSuffix]+relations_counter[SuperPrefix]+relations_counter[SuperString]}")
+                f"Required splits : {relations_counter[OverlapPrefixSuffix]+relations_counter[SuperPrefix]+relations_counter[SuperString]} ")
             output.write(str(relations_counter))
 
             # If we ask to compute edition, we do it
