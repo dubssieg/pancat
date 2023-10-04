@@ -764,11 +764,13 @@ def perform_edition(
             pog1 = IndexedOrderedDict()
             pog2 = IndexedOrderedDict()
 
-            for node, _ in path_in_g1.datas['path']:
-                pog1[node] = graph1.get_segment(node).datas['seq']
+            for node, vect in path_in_g1.datas['path']:
+                pog1[node] = graph1.get_segment(
+                    node).datas['seq'] if vect == '+' else revcomp(graph1.get_segment(node).datas['seq'])
 
-            for node, _ in path_in_g2.datas['path']:
-                pog2[node] = graph2.get_segment(node).datas['seq']
+            for node, vect in path_in_g2.datas['path']:
+                pog2[node] = graph2.get_segment(
+                    node).datas['seq'] if vect == '+' else revcomp(graph2.get_segment(node).datas['seq'])
 
             # We append new path edit to stack
             all_dipaths.append(PathEdit(dpath, pog1, pog2))
