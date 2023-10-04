@@ -314,15 +314,10 @@ class PathEdit:
         # Storing paths (association of ordered segment names and segment sequences)
         self.reference_path: IndexedOrderedDict = path_a
         self.query_path: IndexedOrderedDict = path_b
-        # Basic evaluation of path comparison
-        self.same_segment_count: bool = len(path_a) == len(path_b)
-        # Can be revcomp or same seq, or revcomp of anysubseq
-        self.can_be_aligned: bool = ''.join(path_a.values()) == ''.join(
-            path_b.values()) or ''.join(path_a.values()) == revcomp(''.join(path_b.values()))
-        if not self.can_be_aligned:
+        # Validation of coordinates before starting computing edition
+        if not len(''.join(path_a.values())) == len(''.join(path_b.values())):
             raise ValueError(
-                f"Could not compute edition between the paths {self.alignment_name} as they don't describe the same sequences.\n\n\t{''.join(path_a.values())}\n\t{''.join(path_b.values())}")
-        self.edition: IndexedOrderedDict = IndexedOrderedDict()
+                "Path does not have the same length, probably not defining the same sequence.")
         self.compute_edition()
         self.counts = self.get_counts()
 

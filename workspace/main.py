@@ -15,7 +15,7 @@ from workspace.edit_distance import perform_edition
 from rich import print
 
 from rich.traceback import install
-install(show_locals=True)
+install(show_locals=False)
 
 parser: ArgumentParser = ArgumentParser(
     description='GFA manipulation tools.', add_help=True)
