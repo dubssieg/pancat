@@ -10,7 +10,7 @@ from workspace.isolate_by_range import isolate
 from workspace.offset_in_gfa import add_offsets_to_gfa
 from workspace.paths_bubblegun_bfs import bfs_step, paths_step
 from workspace.grapher import compute_stats, display_graph
-from workspace.reconstruct_sequences import reconstruct, node_range, grab_paths
+from workspace.reconstruct_sequences import reconstruct_paths
 from workspace.edit_distance import perform_edition
 from rich import print
 
@@ -269,19 +269,18 @@ def main() -> None:
             output_path=args.output
         )
     elif args.subcommands == 'reconstruct':
-        followed_paths: list = node_range(grab_paths(
-            args.file, gfa_version_info, args.reference), args.start, args.stop)
-
         if args.split:
-            for i, sequence in enumerate(reconstruct(args.file, gfa_version_info, followed_paths)):
+            for label, sequence in reconstruct_paths(args.file, gfa_version_info).items():
                 with open(f"{args.out}_{i}.fasta", "w", encoding="utf-8") as writer:
                     writer.write(
-                        f"> {followed_paths[i].datas['name']}\n{''.join(sequence)}\n")
+                        f">{label}\n{''.join(sequence)}\n"
+                    )
         else:
             with open(f"{args.out}.fasta", "w", encoding="utf-8") as writer:
-                for i, sequence in enumerate(reconstruct(args.file, gfa_version_info, followed_paths)):
+                for label, sequence in reconstruct_paths(args.file, gfa_version_info).items():
                     writer.write(
-                        f"> {followed_paths[i].datas['name']}\n{''.join(sequence)}\n")
+                        f">{label}\n{''.join(sequence)}\n"
+                    )
     elif args.subcommands == 'edit':
         perform_edition(args.file, gfa_version_info,
                         args.output_folder, args.perform_edition)
