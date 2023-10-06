@@ -1,6 +1,6 @@
 from typing import Generator
 from gfagraphs import Graph, Walk, Path
-from tharospytools import path_allocator, flatten
+from tharospytools import path_allocator, flatten, revcomp
 
 
 def grouper(iterable, n=2, m=1):
@@ -14,7 +14,7 @@ def common_members(elements: list[set]):
 
 
 def bubble_caller(gfa_graph: Graph) -> list[dict]:
-    """Calls out the bubbles in the graph.
+    """Calls out the stritly disjoint (super)bubbles in the graph.
     A bubble can be defined as having a starting and an ending node
     with a in and out node with degree equal to the number of paths
     for superbubble level we don't have to watch the order, as 
@@ -60,7 +60,6 @@ def bubble_caller(gfa_graph: Graph) -> list[dict]:
                 ],
                 2
             )
-            print(bubbles_endpoints)
             # Getting bubble chains
             for i, (start, end) in enumerate(endpoints_indexes):
                 bubbles[i][path.datas['name']
@@ -150,9 +149,9 @@ def linearize_bubbles(gfa_file: str, gfa_type: str, output: str) -> Generator:
 
 
 if __name__ == "__main__":
-    all_bubbles: list[dict] = bubble_caller(Graph(gfa_file="/home/sidubois/Workspace/Notes/graph_cactus_sandra_extract.gfa",
+    all_bubbles: list[dict] = bubble_caller(Graph(gfa_file="/home/sidubois/Workspace/Notes/graph_cactus_sandra.gfa",
                                                   gfa_type='GFA1.1', with_sequence=True))
-    for bubble in all_bubbles:
+    for bubble in flattenable_bubbles(all_bubbles):
         print(bubble)
 
 
@@ -174,16 +173,6 @@ def chain_readway(graph: Graph, chain: list, path_name: str) -> list[str]:
     for ind in (i for i, (e, _) in enumerate(wayline.datas['path']) if e == chain[0]):
         if [x for x, _ in wayline.datas['path'][ind:ind+chain_length]] == chain:
             return [z for _, z in wayline.datas['path'][ind:ind+chain_length]]
-
-# [(1, 3), (8, 10)]
-
-# WARNING bubble seeker needs to take into account the direction it reads nodes :(
-
-# bubbles must be expanded > search for pattern in the bubble after to get a longer chain. if subchain > expand, else go next
-# it means we verify if bubbles are strictly independant
-# source, chain, sink = x[0],x[1:-1],x[-1]
-# if x_next[1] in chain:
-# merge_index = chain.index(x_next[1])
 
 
 def expand_bubbles(bubbles: list[dict]) -> list[dict]:
