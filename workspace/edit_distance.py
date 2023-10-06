@@ -317,7 +317,8 @@ class PathEdit:
         # Validation of coordinates before starting computing edition
         if not len(''.join(path_a.values())) == len(''.join(path_b.values())):
             raise ValueError(
-                "Path does not have the same length, probably not defining the same sequence.")
+                f"Path does not have the same length, probably not defining the same sequence ({len(''.join(path_a.values()))} vs. {len(''.join(path_b.values()))})."
+            )
         self.compute_edition()
         self.counts = self.get_counts()
 
@@ -613,9 +614,8 @@ def edit_by_paths(
                     negative_edits -= 1
                     # We want alternate positions for not erasing nodes in specific cases
                     # I do deserve hell for this
-                    nodes_names: list = [
-                        f'{negative_edits}', edition_event.target_node
-                    ][::-(type(edition_event) not in [OverlapPrefixSuffix, SuperString]) or 1]
+                    nodes_names: list = [f'{negative_edits}', edition_event.target_node][::-(
+                        type(edition_event) not in [OverlapPrefixSuffix, SuperString]) or 1]
                     # Left border of node
                     future_split = graph_to_edit.get_segment(
                         edition_event.target_node)
