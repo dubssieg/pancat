@@ -36,6 +36,10 @@ def bubble_caller(gfa_graph: Graph) -> list[dict]:
         for path in gfa_paths
     }
 
+    all_maps = {
+        path.datas['name']: path.datas['path'] for path in gfa_paths
+    }
+
     bubbles_endpoints: list = sorted(common_members(
         list(
             set(x) for x in all_sets.values()
@@ -73,16 +77,22 @@ def bubble_caller(gfa_graph: Graph) -> list[dict]:
             bubbles_endpoints = [
                 endpoint for endpoint in bubbles_endpoints if endpoint not in embed_nodes]
             # If we need to suppress endpoints, we will have different length, so we will loop
-    return bubbles
+    #  Extracting reading way
+    oriented_bubbles: list[dict] = [{}
+                                    for _ in range(len(bubbles_endpoints)-1)]
+    for i, (start, end) in enumerate(endpoints_indexes):
+        for path in gfa_paths:
+            oriented_bubbles[i][path.datas['name']
+                                ] = all_maps[path.datas['name']][start:end+1]
+    return oriented_bubbles
 
 
-def call_variants(gfa_file: str, gfa_type: str, reference_name: str) -> Generator:
-    """Given a GFA file and a path name, calls rank 1 variants against it
+def call_variants(gfa_file: str, gfa_type: str) -> Generator:
+    """Given a GFA file and a path name, calls all rank 1 variants against it
 
     Args:
         gfa_file (str): path to a gfa file
         gfa_type (str): subformat
-        reference_name (str): a path name in the gfa file
     """
     gfa_graph: Graph = Graph(
         gfa_file=gfa_file,
@@ -92,20 +102,10 @@ def call_variants(gfa_file: str, gfa_type: str, reference_name: str) -> Generato
     for bubble in bubbles:
         yield {
             path_name: ''.join(
-                [gfa_graph.get_segment(node=node).datas['seq']
-                 for node in path_chain]
+                [gfa_graph.get_segment(node=node).datas['seq'] if orientation == '+' else revcomp(gfa_graph.get_segment(node=node).datas['seq'])
+                 for node, orientation in path_chain]
             ) for path_name, path_chain in bubble.items()
         }
-
-
-"""
-def flatten_graph(gfa_file: str, gfa_type: str) -> None:
-    gfa_graph: Graph = Graph(
-        gfa_file=gfa_file,
-        gfa_type=gfa_type,
-        with_sequence=True)
-    bubbles: list[dict] = bubble_caller(gfa_graph=gfa_graph)
-"""
 
 
 def flattenable_bubbles(bubbles: list[dict]) -> Generator:
@@ -136,44 +136,61 @@ def linearize_bubbles(gfa_file: str, gfa_type: str, output: str) -> Generator:
         with_sequence=True)
     bubbles: list[dict] = bubble_caller(gfa_graph=gfa_graph)
     # Init return graph
-    output_graph: Graph(
+    output_graph: Graph = Graph(
         gfa_file=None,
         gfa_type=gfa_type,
         with_sequence=True
     )
-    copied_nodes: set = set()
+    output_graph.headers = gfa_graph.headers
+    contained_nodes: set = set()
+    path_builder: dict = {path.datas["name"]: []
+                          for path in gfa_graph.get_path_list()}
     # For each bubble, we compute new nodes
     for bubble in bubbles:
-        for path_name, node_chain in bubble.items():
-            pass
+        for path_name, path_chain in bubble.items():
+            # min bubble is of size 2, if two nodes are one next to another
+            (source, ori_source), chained, (sink, ori_sink) = path_chain[0], path_chain[1:len(
+                path_chain)-1], path_chain[-1]
+            for node, ori in [(source, ori_source), (sink, ori_sink)]:
+                if node not in contained_nodes:
+                    output_graph.add_node(node, gfa_graph.get_segment(node=node).datas['seq'] if ori == '+' else revcomp(
+                        gfa_graph.get_segment(node=node).datas['seq']))
+                    contained_nodes.add(node)
+
+            # if theres a central chain
+            if len(chained) > 0:
+                # node + edge between source + new node and new node + sink
+                target: str = chained[0][0]
+                output_graph.add_node(target, ''.join([gfa_graph.get_segment(node=node).datas['seq'] if orientation == '+' else revcomp(
+                    gfa_graph.get_segment(node=node).datas['seq'])for node, orientation in chained]))
+                output_graph.add_edge(source, ori_source.value, target, '+')
+                output_graph.add_edge(target, '+', sink, ori_sink.value)
+                if len(path_builder[path_name]) == 0:
+                    path_builder[path_name] = [
+                        (source, ori_source), (target, '+'), (sink, ori_sink)]
+                else:
+                    path_builder[path_name] = path_builder[path_name] + \
+                        [(target, '+'), (sink, ori_sink)]
+            else:
+                # edge between source and sink
+                output_graph.add_edge(
+                    source, ori_source.value, sink, ori_sink.value)
+                if len(path_builder[path_name]) == 0:
+                    path_builder[path_name] = [
+                        (source, ori_source), (sink, ori_sink)]
+                else:
+                    path_builder[path_name] = path_builder[path_name] + \
+                        [(sink, ori_sink)]
+    for path_name, chain in path_builder.items():
+        output_graph.add_path(path_name, chain)
+    output_graph.save_graph(output_path)
+
+    # Adding paths
 
 
 if __name__ == "__main__":
-    all_bubbles: list[dict] = bubble_caller(Graph(gfa_file="/home/sidubois/Workspace/Notes/graph_cactus_sandra.gfa",
-                                                  gfa_type='GFA1.1', with_sequence=True))
-    for bubble in flattenable_bubbles(all_bubbles):
-        print(bubble)
-
-
-def chain_readway(graph: Graph, chain: list, path_name: str) -> list[str]:
-    """Extracts from paths the information about the way we must read.
-    Beware: this does not function with current position and will stop at the first match
-    meaning that if 
-
-    Args:
-        graph (Graph): a gfa graph from gfagraphs library
-        chain (list): the subchain of the bubble we seeking for
-        path_name (str): name of the current path
-
-    Returns:
-        list[str]: orientations segments must be read
-    """
-    wayline: Walk | Path = graph.get_path(path_name)
-    chain_length: int = len(chain)
-    for ind in (i for i, (e, _) in enumerate(wayline.datas['path']) if e == chain[0]):
-        if [x for x, _ in wayline.datas['path'][ind:ind+chain_length]] == chain:
-            return [z for _, z in wayline.datas['path'][ind:ind+chain_length]]
-
-
-def expand_bubbles(bubbles: list[dict]) -> list[dict]:
-    current_bubble: dict = bubbles[0]
+    linearize_bubbles(
+        gfa_file="/home/sidubois/Workspace/Notes/graph_cactus_sandra_extract.gfa",
+        gfa_type='GFA1.1',
+        output="/home/sidubois/Workspace/Notes/graph_cactus_sandra_linear.gfa"
+    )
