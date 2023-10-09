@@ -12,6 +12,7 @@ from workspace.paths_bubblegun_bfs import bfs_step, paths_step
 from workspace.grapher import compute_stats, display_graph
 from workspace.reconstruct_sequences import reconstruct_paths
 from workspace.edit_distance import perform_edition
+from workspace.bubble_seeker import linearize_bubbles
 from rich import print
 
 from rich.traceback import install
@@ -85,6 +86,14 @@ parser_neighborhood.add_argument(
 parser_neighborhood.add_argument("-c", "--count", type=int,
                                  help="Number of nodes around each starting point")
 
+## Subparser for linearize ##
+
+parser_linear: ArgumentParser = subparsers.add_parser(
+    'linearize', help="Tries to simplify the graph structure, compressing superbubble chains in simple nodes.")
+
+parser_linear.add_argument("file", type=str, help="Path to a gfa-like file")
+parser_linear.add_argument("output", type=str,
+                           help="Output path for the gfa graph simplified file.")
 
 ## Subparser for grapher ##
 
@@ -284,6 +293,12 @@ def main() -> None:
     elif args.subcommands == 'edit':
         perform_edition(args.file, gfa_version_info,
                         args.output_folder, args.perform_edition)
+    elif args.subcommands == 'linearize':
+        linearize_bubbles(
+            gfa_file=args.file,
+            gfa_type=gfa_version_info,
+            output=args.output
+        )
     else:
         print(
             "[dark_orange]Unknown command. Please use the help to see available commands.")

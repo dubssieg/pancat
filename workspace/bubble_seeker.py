@@ -67,7 +67,7 @@ def bubble_caller(gfa_graph: Graph) -> list[dict]:
             # Getting bubble chains
             for i, (start, end) in enumerate(endpoints_indexes):
                 bubbles[i][path.datas['name']
-                           ] = all_sets[path.datas['name']][start:end+1]
+                           ] = all_sets[path.datas['name']][start:end]
 
             # Decompressing all paths
             embed_nodes: set = set(flatten(
@@ -80,8 +80,18 @@ def bubble_caller(gfa_graph: Graph) -> list[dict]:
     #  Extracting reading way
     oriented_bubbles: list[dict] = [{}
                                     for _ in range(len(bubbles_endpoints)-1)]
-    for i, (start, end) in enumerate(endpoints_indexes):
-        for path in gfa_paths:
+    for path in gfa_paths:
+        endpoints_indexes: list = grouper(
+            [
+                all_sets[
+                    path.datas['name']
+                ].index(
+                    endpoint
+                ) for endpoint in bubbles_endpoints
+            ],
+            2
+        )
+        for i, (start, end) in enumerate(endpoints_indexes):
             oriented_bubbles[i][path.datas['name']
                                 ] = all_maps[path.datas['name']][start:end+1]
     return oriented_bubbles
@@ -135,6 +145,10 @@ def linearize_bubbles(gfa_file: str, gfa_type: str, output: str) -> Generator:
         gfa_type=gfa_type,
         with_sequence=True)
     bubbles: list[dict] = bubble_caller(gfa_graph=gfa_graph)
+    if any([not len(x) for bubble in bubbles for x in bubble.values()]):
+        raise ValueError(
+            "Unexepected event detected. A zero-sized bubble was detected, indicating a potential loop."
+        )
     # Init return graph
     output_graph: Graph = Graph(
         gfa_file=None,
@@ -181,16 +195,7 @@ def linearize_bubbles(gfa_file: str, gfa_type: str, output: str) -> Generator:
                 else:
                     path_builder[path_name] = path_builder[path_name] + \
                         [(sink, ori_sink)]
+    # Adding paths
     for path_name, chain in path_builder.items():
         output_graph.add_path(path_name, chain)
     output_graph.save_graph(output_path)
-
-    # Adding paths
-
-
-if __name__ == "__main__":
-    linearize_bubbles(
-        gfa_file="/home/sidubois/Workspace/Notes/graph_cactus_sandra_extract.gfa",
-        gfa_type='GFA1.1',
-        output="/home/sidubois/Workspace/Notes/graph_cactus_sandra_linear.gfa"
-    )
