@@ -40,7 +40,6 @@ class EditEvent():
         self.reference_node = ref_name
         self.target_node = target_name
         self.event = type(self).__name__
-        self.revcomp: bool = revcomp(seq_b) == seq_a
         self.positions_target: tuple = (start_target, end_target)
         self.offsets_target: tuple = (
             offset_target, offset_target+(end_target-start_target))
@@ -315,10 +314,8 @@ class PathEdit:
         self.reference_path: IndexedOrderedDict = path_a
         self.query_path: IndexedOrderedDict = path_b
         # Validation of coordinates before starting computing edition
-        if not len(''.join(path_a.values())) == len(''.join(path_b.values())):
-            raise ValueError(
-                f"Path does not have the same length, probably not defining the same sequence ({len(''.join(path_a.values()))} vs. {len(''.join(path_b.values()))})."
-            )
+        # if not len(''.join(path_a.values())) == len(''.join(path_b.values())):
+        #    raise ValueError(f"Path does not have the same length, probably not defining the same sequence ({len(''.join(path_a.values()))} vs. {len(''.join(path_b.values()))}).")
         self.compute_edition()
         self.counts = self.get_counts()
 
@@ -761,11 +758,11 @@ def perform_edition(
 
             for node, vect in path_in_g1.datas['path']:
                 pog1[node] = graph1.get_segment(
-                    node).datas['seq'] if vect == '+' else revcomp(graph1.get_segment(node).datas['seq'])
+                    node).datas['seq'] if vect.value == '+' else revcomp(graph1.get_segment(node).datas['seq'])
 
             for node, vect in path_in_g2.datas['path']:
                 pog2[node] = graph2.get_segment(
-                    node).datas['seq'] if vect == '+' else revcomp(graph2.get_segment(node).datas['seq'])
+                    node).datas['seq'] if vect.value == '+' else revcomp(graph2.get_segment(node).datas['seq'])
 
             # We append new path edit to stack
             all_dipaths.append(PathEdit(dpath, pog1, pog2))

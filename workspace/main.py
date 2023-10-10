@@ -10,7 +10,7 @@ from workspace.isolate_by_range import isolate
 from workspace.offset_in_gfa import add_offsets_to_gfa
 from workspace.paths_bubblegun_bfs import bfs_step, paths_step
 from workspace.grapher import compute_stats, display_graph
-from workspace.reconstruct_sequences import reconstruct_paths
+from workspace.reconstruct_sequences import reconstruct_paths, graph_against_fasta
 from workspace.edit_distance import perform_edition
 from workspace.bubble_seeker import linearize_bubbles
 from rich import print
@@ -115,6 +115,18 @@ parser_stats: ArgumentParser = subparsers.add_parser(
 parser_stats.add_argument("file", type=str, help="Path to a gfa-like file")
 parser_stats.add_argument(
     "-b", "--boundaries", type=int, help="One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp and one for nodes in range 2001-inf bp).", nargs='+', default=[50])
+
+## Subparser for assert_complete_pangenome ##
+
+parser_complete: ArgumentParser = subparsers.add_parser(
+    'complete', help="Asserts if the graph is a completet pangenome graph"
+)
+
+parser_complete.add_argument(
+    "file", type=str, help="Path to a gfa-like file")
+parser_complete.add_argument(
+    "pipeline", type=str, help="Tab-separated mapping between path names and path to files")
+
 
 ## Subparser for reconstruct_sequences ##
 
@@ -235,6 +247,8 @@ def main() -> None:
     if args.subcommands == 'isolate':
         isolate(args.file, args.out, args.start, args.end,
                 gfa_version_info, args.reference)
+    elif args.subcommands == 'complete':
+        graph_against_fasta(args.file, gfa_version_info, args.pipeline)
     elif args.subcommands == 'offset':
         add_offsets_to_gfa(args.file, args.out, gfa_version_info)
     elif args.subcommands == 'neighborhood':
