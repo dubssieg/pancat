@@ -786,15 +786,17 @@ def perform_edition(
             for dipath in all_dipaths:
                 for key, value in dipath.edition.items():
                     required_merges += max(0, len(value)-1)
-                    relations_counter.update([type(val) for val in value])
+                    relations_counter.update(
+                        [type(val).__name__ for val in value])
                     # Variable value is a list of EditEvent
                     edits: str = ','.join(
                         [f"{val},{val.offsets_ref},{val.offsets_target}" for val in value])
                     output.write(
                         f"{dipath.alignment_name}\t{key}\t{edits}\n")
-            output.write(f"Required merges : {required_merges} ")
-            output.write(
-                f"Required splits : {relations_counter[OverlapPrefixSuffix]+relations_counter[SuperPrefix]+relations_counter[SuperString]} ")
+            relations_counter["Merges"] = required_merges
+            relations_counter["Splits"] = relations_counter['OverlapPrefixSuffix'] + \
+                relations_counter['SuperPrefix'] + \
+                relations_counter['SuperString']
             output.write(str(relations_counter))
 
             # If we ask to compute edition, we do it
@@ -807,6 +809,7 @@ def perform_edition(
                     output_folder, f"edited_graph_{Path(file_1).stem}_{Path(file_2).stem}.gfa"))
 
             del graph1, graph2
+    return relations_counter
 
 
 if __name__ == "__main__":
