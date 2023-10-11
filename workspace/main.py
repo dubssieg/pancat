@@ -155,6 +155,8 @@ parser_edit.add_argument(
     "-o", "--output_folder", required=True, type=str, help="Path to a folder for results.")
 parser_edit.add_argument(
     "-p", "--perform_edition", help="Asks to perform edition on graph and outputs it.", action='store_true')
+parser_edit.add_argument(
+    "--selection", type=str, help="Name(s) for the paths you want to reconstruct.", nargs='*', default=None)
 
 
 #######################################
@@ -291,7 +293,7 @@ def main() -> None:
                     )
     elif args.subcommands == 'edit':
         perform_edition(args.file, gfa_version_info,
-                        args.output_folder, args.perform_edition)
+                        args.output_folder, args.perform_edition, args.selection)
     elif args.subcommands == 'linearize':
         linearize_bubbles(
             gfa_file=args.file,

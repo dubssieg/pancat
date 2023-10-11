@@ -311,9 +311,10 @@ class PathEdit:
         """
         self.alignment_name: str = path_name
         # Storing paths (association of ordered segment names and segment sequences)
-        self.reference_path: IndexedOrderedDict = path_a
-        self.query_path: IndexedOrderedDict = path_b
+        self.reference_path: list[tuple] = path_a
+        self.query_path: list[tuple] = path_b
         # Validation of coordinates before starting computing edition
+        # print(f"Length of path#1: {len(''.join(path_a.values()))}, length of path#2: {len(''.join(path_b.values()))}")
         # if not len(''.join(path_a.values())) == len(''.join(path_b.values())):
         #    raise ValueError(f"Path does not have the same length, probably not defining the same sequence ({len(''.join(path_a.values()))} vs. {len(''.join(path_b.values()))}).")
         self.compute_edition()
@@ -348,14 +349,11 @@ class PathEdit:
 
         # Computing endpos for each node
         reference_endpos: list = [0] + \
-            list(accumulate(len(x) for x in self.reference_path.values()))
+            list(accumulate(len(x) for _, x in self.reference_path))
         query_endpos: list = [0] + \
-            list(accumulate(len(x) for x in self.query_path.values()))
+            list(accumulate(len(x) for _, x in self.query_path))
 
         while idx_reference < len(self.reference_path):
-            # Current targeted nodes
-            seq_reference: str = self.reference_path.values()[idx_reference]
-            seq_query: str = self.query_path.values()[idx_query]
 
             # Init edit list for unbound
             edit_list: list = list()
@@ -371,12 +369,17 @@ class PathEdit:
                 query_start: int = query_endpos[idx_query]
                 query_end: int = query_endpos[idx_query+1]
 
+                # Current targeted nodes
+
+                node_reference, seq_reference = self.reference_path[idx_reference]
+                node_query, seq_query = self.query_path[idx_query]
+
                 if reference_end == query_end and reference_start == query_start:
                     # No edition to be made, it's an equivalence
                     edit_list.append(
                         String(
-                            self.reference_path.keys()[idx_reference],
-                            self.query_path.keys()[idx_query],
+                            node_reference,
+                            node_query,
                             seq_reference,
                             seq_query,
                             offset_query,
@@ -395,8 +398,8 @@ class PathEdit:
                     # Reference is a subpart of other node
                     edit_list.append(
                         SuperString(
-                            self.reference_path.keys()[idx_reference],
-                            self.query_path.keys()[idx_query],
+                            node_reference,
+                            node_query,
                             seq_reference,
                             seq_query,
                             offset_query,
@@ -415,8 +418,8 @@ class PathEdit:
                     # Other node is included in reference
                     edit_list.append(
                         SubString(
-                            self.reference_path.keys()[idx_reference],
-                            self.query_path.keys()[idx_query],
+                            node_reference,
+                            node_query,
                             seq_reference,
                             seq_query,
                             offset_query,
@@ -434,8 +437,8 @@ class PathEdit:
                 elif reference_start == query_start and reference_end > query_end:
                     edit_list.append(
                         SubPrefix(
-                            self.reference_path.keys()[idx_reference],
-                            self.query_path.keys()[idx_query],
+                            node_reference,
+                            node_query,
                             seq_reference,
                             seq_query,
                             offset_query,
@@ -453,8 +456,8 @@ class PathEdit:
                 elif reference_start == query_start and reference_end < query_end:
                     edit_list.append(
                         SuperPrefix(
-                            self.reference_path.keys()[idx_reference],
-                            self.query_path.keys()[idx_query],
+                            node_reference,
+                            node_query,
                             seq_reference,
                             seq_query,
                             offset_query,
@@ -472,8 +475,8 @@ class PathEdit:
                 elif reference_start < query_start and reference_end == query_end:
                     edit_list.append(
                         SubSuffix(
-                            self.reference_path.keys()[idx_reference],
-                            self.query_path.keys()[idx_query],
+                            node_reference,
+                            node_query,
                             seq_reference,
                             seq_query,
                             offset_query,
@@ -491,8 +494,8 @@ class PathEdit:
                 elif reference_start > query_start and reference_end == query_end:
                     edit_list.append(
                         SuperSuffix(
-                            self.reference_path.keys()[idx_reference],
-                            self.query_path.keys()[idx_query],
+                            node_reference,
+                            node_query,
                             seq_reference,
                             seq_query,
                             offset_query,
@@ -510,8 +513,8 @@ class PathEdit:
                 elif reference_start < query_start and reference_end < query_end:
                     edit_list.append(
                         OverlapPrefixSuffix(
-                            self.reference_path.keys()[idx_reference],
-                            self.query_path.keys()[idx_query],
+                            node_reference,
+                            node_query,
                             seq_reference,
                             seq_query,
                             offset_query,
@@ -529,8 +532,8 @@ class PathEdit:
                 elif reference_start > query_start and reference_end > query_end:
                     edit_list.append(
                         OverlapSuffixPrefix(
-                            self.reference_path.keys()[idx_reference],
-                            self.query_path.keys()[idx_query],
+                            node_reference,
+                            node_query,
                             seq_reference,
                             seq_query,
                             offset_query,
@@ -554,7 +557,7 @@ class PathEdit:
                 if offset_reference >= reference_endpos[idx_reference+1]:
                     idx_reference += 1
 
-            self.edition[self.reference_path.keys()[current_pos]] = edit_list
+            self.edition[idx_reference] = edit_list
             edit_list: list = list()
 
 
@@ -711,6 +714,7 @@ def perform_edition(
         gfa_versions: list,
         output_folder: str,
         do_edition: bool = True,
+        selection: list | None = None,
         do_plot: bool = False
 ) -> None:
     """Main loop for edition ; iterates over couples of files
@@ -742,10 +746,18 @@ def perform_edition(
         graph1: Graph = Graph(file_1, version_1, True)
         graph2: Graph = Graph(file_2, version_2, True)
 
-        # We perform edition on shared paths, hoping the best for non-common paths \o/
-        # (Best practice is to validate before if all paths are shared)
-        paths = set(path.datas['name'] for path in graph1.get_path_list()).intersection(
-            set(path.datas['name'] for path in graph2.get_path_list()))
+        nodes_of_1: dict = {
+            node.datas["name"]: node.datas["seq"] for node in graph1.segments}
+        nodes_of_2: dict = {
+            node.datas["name"]: node.datas["seq"] for node in graph2.segments}
+
+        if selection:
+            paths: set = set(selection)
+        else:
+            # We perform edition on shared paths, hoping the best for non-common paths \o/
+            # (Best practice is to validate before if all paths are shared)
+            paths = set(path.datas['name'] for path in graph1.get_path_list()).intersection(
+                set(path.datas['name'] for path in graph2.get_path_list()))
 
         # Iterating over paths
         for dpath in paths:
@@ -753,16 +765,10 @@ def perform_edition(
             path_in_g1 = graph1.get_path(dpath)
             path_in_g2 = graph2.get_path(dpath)
 
-            pog1 = IndexedOrderedDict()
-            pog2 = IndexedOrderedDict()
-
-            for node, vect in path_in_g1.datas['path']:
-                pog1[node] = graph1.get_segment(
-                    node).datas['seq'] if vect.value == '+' else revcomp(graph1.get_segment(node).datas['seq'])
-
-            for node, vect in path_in_g2.datas['path']:
-                pog2[node] = graph2.get_segment(
-                    node).datas['seq'] if vect.value == '+' else revcomp(graph2.get_segment(node).datas['seq'])
+            pog1: list[tuple] = [(node, nodes_of_1[node]) if vect.value == '+' else (node, revcomp(
+                nodes_of_1[node])) for node, vect in path_in_g1.datas['path']]
+            pog2: list[tuple] = [(node, nodes_of_2[node]) if vect.value == '+' else (node, revcomp(
+                nodes_of_2[node])) for node, vect in path_in_g2.datas['path']]
 
             # We append new path edit to stack
             all_dipaths.append(PathEdit(dpath, pog1, pog2))
@@ -770,6 +776,8 @@ def perform_edition(
         total_counts: Counter = Counter()
         for dipath in all_dipaths:
             total_counts += dipath.counts
+
+        Path(output_folder).mkdir(parents=True, exist_ok=True)
 
         with open(path.join(output_folder, f"out_{Path(file_1).stem}_against_{Path(file_2).stem}_{i}.log"), "w", encoding='utf-8') as output:
             # Write edited stuff in log
