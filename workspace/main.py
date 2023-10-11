@@ -16,7 +16,7 @@ from workspace.bubble_seeker import linearize_bubbles
 from rich import print
 
 from rich.traceback import install
-install(show_locals=False)
+install(show_locals=True)
 
 parser: ArgumentParser = ArgumentParser(
     description='GFA manipulation tools.', add_help=True)
@@ -140,26 +140,9 @@ parser_reconstruct.add_argument(
 parser_reconstruct.add_argument(
     "out", type=str, help="Output path (without extension)")
 parser_reconstruct.add_argument(
-    "-r",
-    "--reference",
-    help="Tells the reference sequence we seek start and stop into",
-    required=True,
-    type=str
-)
-parser_reconstruct.add_argument(
-    '--start',
-    type=str,
-    help='To specifiy a starting node on reference to create a subgraph',
-    default=None
-)
-parser_reconstruct.add_argument(
-    '--stop',
-    type=str,
-    help='To specifiy a ending node on reference to create a subgraph',
-    default=None
-)
-parser_reconstruct.add_argument(
     "-s", "--split", help="Tells to split in different files", action='store_true')
+parser_reconstruct.add_argument(
+    "--selection", type=str, help="Name(s) for the paths you want to reconstruct.", nargs='*', default=None)
 
 ## Subparser for edit_distance ##
 
@@ -292,15 +275,17 @@ def main() -> None:
             output_path=args.output
         )
     elif args.subcommands == 'reconstruct':
+        sequences: dict = reconstruct_paths(
+            args.file, gfa_version_info, args.selection)
         if args.split:
-            for label, sequence in reconstruct_paths(args.file, gfa_version_info).items():
+            for label, sequence in sequences.items():
                 with open(f"{args.out}_{i}.fasta", "w", encoding="utf-8") as writer:
                     writer.write(
                         f">{label}\n{''.join(sequence)}\n"
                     )
         else:
             with open(f"{args.out}.fasta", "w", encoding="utf-8") as writer:
-                for label, sequence in reconstruct_paths(args.file, gfa_version_info).items():
+                for label, sequence in sequences.items():
                     writer.write(
                         f">{label}\n{''.join(sequence)}\n"
                     )

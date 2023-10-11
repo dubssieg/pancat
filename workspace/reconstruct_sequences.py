@@ -3,10 +3,9 @@ from typing import Generator
 from Bio import SeqIO
 from tharospytools import revcomp
 from gfagraphs import Graph
-# import matplotlib.pyplot as plt
 
 
-def reconstruct_paths(gfa_file: str, gfa_version: str) -> Generator:
+def reconstruct_paths(gfa_file: str, gfa_version: str, selected_paths: list | None = None) -> dict:
     """Given a GFA file with paths, follows those paths to reconstruct the linear sequences
 
     Args:
@@ -25,11 +24,13 @@ def reconstruct_paths(gfa_file: str, gfa_version: str) -> Generator:
         with_sequence=True
     )
     if len(graph_paths := gfa_graph.get_path_list()) > 0:
-        yield from {path.datas["name"]: [
+        paths_to_reconstruct: list = [
+            path for path in graph_paths if path.datas["name"] in selected_paths] if selected_paths else graph_paths
+        return {path.datas["name"]: [
             gfa_graph.get_segment(x).datas['seq'] if vect.value == '+' else revcomp(
                 gfa_graph.get_segment(x).datas['seq']
             ) for x, vect in path.datas["path"]
-        ] for path in graph_paths}
+        ] for path in paths_to_reconstruct}
     else:
         raise ValueError(
             "Graph has no embed paths. Could'nt determine what to reconstruct!"
@@ -67,7 +68,6 @@ def hard_reconstruct(gfa_file: str, gfa_version: str) -> dict:
 def graph_against_fasta(gfa_graph: str, gfa_version: str, pipeline_txt: str) -> bool:
     with open(pipeline_txt, 'r', encoding='utf-8') as pipeline:
         lines = pipeline.readlines()
-        # fig, axs = plt.subplots(len(lines), sharex=True,figsize=(len(lines)*3+2, 12))
         reconstruction: dict = hard_reconstruct(gfa_graph, gfa_version)
         complete_pangenome_graph: list[bool] = [
             False for _ in range(len(lines))]
@@ -97,8 +97,6 @@ def graph_against_fasta(gfa_graph: str, gfa_version: str, pipeline_txt: str) -> 
                                 print(
                                     f"[{seq_name}] Sequence {record.id} and path represents the same sequence.")
                                 complete_pangenome_graph[y] = True
-                            # axs[y].bar(range(len(densities)), densities)
-                            # axs[y].set_xlim([0, 100])
             else:
                 print(
                     f"[{seq_name}] Can't find {seq_name} in the paths of the graph.")
@@ -107,4 +105,3 @@ def graph_against_fasta(gfa_graph: str, gfa_version: str, pipeline_txt: str) -> 
         else:
             print(f"{gfa_graph} is not a complete pangenome graph")
     return all(complete_pangenome_graph)
-    # plt.show()

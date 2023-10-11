@@ -1,6 +1,5 @@
 build:
-  @pip install --upgrade pip
-  @python -m pip install . --quiet
+  @pip install --upgrade pip && python -m pip install -r requirements.txt --upgrade && python -m pip install . --quiet
 
 env:
   @WD=$(pwd)
