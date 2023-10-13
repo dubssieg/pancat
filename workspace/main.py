@@ -280,7 +280,7 @@ def main() -> None:
         sequences: dict = reconstruct_paths(
             args.file, gfa_version_info, args.selection)
         if args.split:
-            for label, sequence in sequences.items():
+            for i, (label, sequence) in enumerate(sequences.items()):
                 with open(f"{args.out}_{i}.fasta", "w", encoding="utf-8") as writer:
                     writer.write(
                         f">{label}\n{''.join(sequence)}\n"
