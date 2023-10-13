@@ -794,9 +794,10 @@ def perform_edition(
                     output.write(
                         f"{dipath.alignment_name}\t{key}\t{edits}\n")
             relations_counter["Merges"] = required_merges
-            relations_counter["Splits"] = relations_counter['OverlapPrefixSuffix'] + \
-                relations_counter['SuperPrefix'] + \
-                relations_counter['SuperString']
+            relations_counter["Splits"] = relations_counter[OverlapPrefixSuffix.__name__] + \
+                relations_counter[SuperPrefix.__name__] + \
+                relations_counter[SuperString.__name__]
+            print(relations_counter["Splits"])
             output.write(str(relations_counter))
 
             # If we ask to compute edition, we do it

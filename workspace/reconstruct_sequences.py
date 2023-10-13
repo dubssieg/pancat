@@ -27,8 +27,8 @@ def reconstruct_paths(gfa_file: str, gfa_version: str, selected_paths: list | No
         paths_to_reconstruct: list = [
             path for path in graph_paths if path.datas["name"] in selected_paths] if selected_paths else graph_paths
         return {path.datas["name"]: [
-            gfa_graph.get_segment(x).datas['seq'] if vect.value == '+' else revcomp(
-                gfa_graph.get_segment(x).datas['seq']
+            gfa_graph.get_sequence(x) if vect.value == '+' else revcomp(
+                gfa_graph.get_sequence(x)
             ) for x, vect in path.datas["path"]
         ] for path in paths_to_reconstruct}
     else:
@@ -57,7 +57,7 @@ def hard_reconstruct(gfa_file: str, gfa_version: str) -> dict:
     )
     if len(graph_paths := gfa_graph.get_path_list()) > 0:
         return {path.datas["name"]: [
-            gfa_graph.get_segment(x).datas['seq'] if vect.value == '+' else revcomp(gfa_graph.get_segment(x).datas['seq']) for x, vect in path.datas["path"]
+            gfa_graph.get_sequence(x) if vect.value == '+' else revcomp(gfa_graph.get_sequence(x)) for x, vect in path.datas["path"]
         ] for path in graph_paths}
     else:
         raise ValueError(

@@ -1,5 +1,5 @@
 from typing import Generator
-from gfagraphs import Graph, Walk, Path
+from gfagraphs import Graph
 from tharospytools import path_allocator, flatten, revcomp
 
 
@@ -112,7 +112,7 @@ def call_variants(gfa_file: str, gfa_type: str) -> Generator:
     for bubble in bubbles:
         yield {
             path_name: ''.join(
-                [gfa_graph.get_segment(node=node).datas['seq'] if orientation == '+' else revcomp(gfa_graph.get_segment(node=node).datas['seq'])
+                [gfa_graph.get_segment(node=node).datas['seq'] if orientation.value == '+' else revcomp(gfa_graph.get_segment(node=node).datas['seq'])
                  for node, orientation in path_chain]
             ) for path_name, path_chain in bubble.items()
         }
@@ -167,7 +167,7 @@ def linearize_bubbles(gfa_file: str, gfa_type: str, output: str) -> Generator:
                 path_chain)-1], path_chain[-1]
             for node, ori in [(source, ori_source), (sink, ori_sink)]:
                 if node not in contained_nodes:
-                    output_graph.add_node(node, gfa_graph.get_segment(node=node).datas['seq'] if ori == '+' else revcomp(
+                    output_graph.add_node(node, gfa_graph.get_segment(node=node).datas['seq'] if ori.value == '+' else revcomp(
                         gfa_graph.get_segment(node=node).datas['seq']))
                     contained_nodes.add(node)
 
@@ -175,7 +175,7 @@ def linearize_bubbles(gfa_file: str, gfa_type: str, output: str) -> Generator:
             if len(chained) > 0:
                 # node + edge between source + new node and new node + sink
                 target: str = chained[0][0]
-                output_graph.add_node(target, ''.join([gfa_graph.get_segment(node=node).datas['seq'] if orientation == '+' else revcomp(
+                output_graph.add_node(target, ''.join([gfa_graph.get_segment(node=node).datas['seq'] if orientation.value == '+' else revcomp(
                     gfa_graph.get_segment(node=node).datas['seq'])for node, orientation in chained]))
                 output_graph.add_edge(source, ori_source.value, target, '+')
                 output_graph.add_edge(target, '+', sink, ori_sink.value)
