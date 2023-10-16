@@ -2,123 +2,77 @@
 from argparse import ArgumentParser, SUPPRESS
 from collections import deque
 from gfagraphs import Segment, Graph, Walk, Path, GfaStyle
+from workspace.offset_in_gfa import calculate_sequence_offsets
+from workspace.find_bubbles import common_members
+from tharospytools import path_allocator
 
 
-def nodes_to_keep(list_of_nodes: list[Segment], embed_paths: dict[str, Walk | Path], start_point: int, end_point: int, reference: str) -> tuple:
-    """Given a range of positions, only keeps nodes that are embed within that range
-
-    Args:
-        list_of_nodes (list[Segment]): all nodes from the graph
-        start_point (int): a starting point
-        end_point (int): a ending point
-
-    Returns:
-        set: all nodes names that participates in the range
-    """
-    nodes: set = set()
-    node_data: dict = dict()
-    for node in list_of_nodes:
-        # get nodelist from reference
-        if reference in node.datas['PO'].keys():
-            if node.datas['PO'][reference][1] >= start_point and node.datas['PO'][reference][0] <= end_point:
-                nodes.add(node.datas["name"])
-                node_data[node.datas["name"]] = node.datas['PO']
-    for name, path in embed_paths.items():
-        path.datas["path"] = deque(
-            path.datas["path"], maxlen=len(path.datas["path"]))
-        try:
-            while not path.datas["path"][0][0] in nodes:
-                _ = path.datas["path"].popleft()
-            path.datas["start_offset"] = node_data[path.datas["path"]
-                                                   [0][0]][path.datas["name"]][0]
-            while not path.datas["path"][-1][0] in nodes:
-                _ = path.datas["path"].pop()
-            path.datas["stop_offset"] = node_data[path.datas["path"]
-                                                  [-1][0]][path.datas["name"]][1]
-        except IndexError:
-            # No node inside path is in set, removing path
-            embed_paths[name] = None  # type: ignore
-        for node, _ in path.datas["path"]:
-            nodes.add(node)
-    return nodes, embed_paths
-
-
-def isolate(gfa_graph: str, output: str, start_point: int, end_point: int, gfa_style: str, reference_path_name: str) -> None:
-    """Given a GFA file, extracts subgraph within position range. Requires PO offset (other script).
-
-    Args:
-        gfa_graph (str): input graph
-        output (str): output graph
-        start_point (int): bp position
-        end_point (int): bp position
-        gfa_style (str): gfa subtype
-    """
-    graph: Graph = Graph(gfa_graph, gfa_style)
-    embed_paths: dict[str, Walk | Path] = {
-        path.datas['name']: path for path in graph.get_path_list()}
-    extracted_nodes, embed_paths = nodes_to_keep(
-        graph.segments, embed_paths, start_point, end_point, reference_path_name)
-    del graph
-    with open(output, 'w', encoding='utf-8') as gfa_writer:
-        with open(gfa_graph, 'r', encoding='utf-8') as gfa_reader:
-            for line in gfa_reader:
-                if (x := line.split())[0] == 'S' and x[1] in extracted_nodes:
-                    gfa_writer.write(line)
-                elif x[0] == 'L' and x[1] in extracted_nodes and x[3] in extracted_nodes:
-                    gfa_writer.write(line)
-                elif x[0] == 'H':
-                    if GfaStyle(gfa_style) != GfaStyle.RGFA:
-                        gfa_writer.write(line)
-    new_paths: dict = {
-        name: [path.datas['path'], path.datas['start_offset'], path.datas['stop_offset']] if path is not None else [embed_paths[reference_path_name].datas['path'], embed_paths[reference_path_name].datas['start_offset'], embed_paths[reference_path_name].datas['stop_offset']] for name, path in embed_paths.items()}
-    match GfaStyle(gfa_style):
-        case GfaStyle.GFA1:
-            with open(output, 'a', encoding='utf-8') as gfa_writer:
-                gfa_writer.writelines(
-                    [f"P\t{key}\t{','.join([node+orientation.value for node,orientation in val1])}\t*\n" for key, (val1, _, _) in new_paths.items()])
-        case GfaStyle.GFA1_1:
-            with open(output, 'a', encoding='utf-8') as gfa_writer:
-                gfa_writer.writelines(
-                    [f"W\t{key}\t{i}\t{key}\t{start}\t{stop}\t{''.join([orientation.value+node for node,orientation in path]).replace('+', '>').replace('-', '<')}\t*\n" for i, (key, (path, start, stop)) in enumerate(new_paths.items())])
-        case GfaStyle.RGFA:
-            pass
-        case _:
-            raise NotImplementedError(
-                "Functionnality currently not implemented.")
-
-
-if __name__ == '__main__':
-    parser = ArgumentParser(add_help=False)
-    parser.add_argument("file", type=str, help="Path to a gfa-like file")
-    parser.add_argument("out", type=str, help="Output path (with extension)")
-    parser.add_argument('-h', '--help', action='help', default=SUPPRESS,
-                        help='Extracts subgraphs from a GFA graph')
-    parser.add_argument(
-        "-g",
-        "--gfa_version",
-        help="Tells the GFA input style",
-        required=True,
-        choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
+def range_isolate(gfa_file: str, gfa_ver: str, output: str, reference_name:str, start: int, stop: int) -> None:
+    # Load graph in memory
+    gfa_graph: Graph = Graph(
+        gfa_file=gfa_file,
+        gfa_type=gfa_ver,
+        with_sequence=True
     )
-    parser.add_argument(
-        '-s',
-        '--start',
-        type=int,
-        help='To specifiy a starting point (in bp) to create a subgraph',
+    # Computing offsets
+    embed_paths: list = gfa_graph.get_path_list()
+    nodes_information: dict = {
+        node.datas["name"]: len(node.datas["seq"]) for node in gfa_graph.segments
+    }
+    sequence_offsets,walks_offsets: list = calculate_sequence_offsets(
+        nodes_information,
+        embed_paths
     )
-    parser.add_argument(
-        '-e',
-        '--end',
-        type=int,
-        help='To specifiy a end point (in bp) to create a subgraph',
+    
+    # Getting sources and sinks
+    all_sets = {
+        path.datas['name']:
+            [
+                node_name for node_name, _ in path.datas['path']
+        ]
+        for path in embed_paths
+    }
+    bubbles_endpoints: list = common_members(
+        list(
+            set(x) for x in all_sets.values()
+        )
     )
-    parser.add_argument(
-        '-r',
-        '--reference',
-        type=str,
-        help='To specifiy the path to follow',
-    )
-    args = parser.parse_args()
+    mapping:dict = {}
+    # This way does not work. we need to check positions relative to reference. See formulas in paper.
+    
 
-    isolate(args.file, args.out, args.start, args.end,
-            args.gfa_version, args.reference)
+    node_set:set = set()
+    # Filtering walks
+    for walk_name,walk_sequence in walks_offsets.items():
+        path_to_edit:Walk|Path = gfa_graph.get_path(walk_name)
+        walk_start_index:int = 0
+        walk_stop_index:int = 0
+        for i,(x,y) in enumerate(walk_sequence):
+            if x<=start and y >= start:
+                walk_start_index = i
+                path_to_edit.datas['start_offset'] = x
+            elif x<=stop and y>=stop:
+                walk_stop_index = i
+                path_to_edit.datas['stop_offset'] = y
+        path_to_edit.datas['path'] = path_to_edit.datas['path'][walk_start_index,walk_stop_index]
+        # Retrieve nodes of walk, and adding them to the set
+        node_set.add([node for node,_ in path_to_edit.datas['path']])
+    
+    # Filtering nodes
+    gfa_graph.segments = [seg for seg in gfa_graph.segments if seg.datas['name'] in node_set]
+    # Adding coordinates
+    for seg in gfa_graph.segments:
+        seg.datas['PO'] = sequence_offsets[seg.datas['name']]
+    
+    # Filtering edges
+    gfa_graph.lines = [line for line in gfa_graph.lines if line.datas['start'] in node_set and line.datas['end'] in node_set]
+        
+    # Allocate output path and write the file
+    gfa_graph.save_graph(
+        output_path=path_allocator(
+            path_to_validate=output,
+            particle='.gfa',
+            default_name=f'extracted_graph_{start}_{stop}'
+        ),
+        output_format=gfa_graph.version
+    )

@@ -60,31 +60,11 @@ parser_isolate.add_argument(
 
 parser_offset: ArgumentParser = subparsers.add_parser(
     'offset', help="Add path offsets to a graph\n"
-    "Adds a JSON string, PO (Path Offset) positions, relative to paths. Hence, PO:J:{'w1':(334,335,'+'),'w2':(245,247,'-')} tells that the walk/path w1 contains the sequence starting at position 334 and ending at position 335, and the walk/path w2 contains the sequence starting at the offset 245 (ending 247), and that the sequences are reversed one to each other. Note that any non-referenced walk in this field means that the node is not inside the given walk.")
+    "Adds a JSON string, PO (Path Offset) positions, relative to paths. Hence, PO:J:{'w1':[(334,335,'+')],'w2':[(245,247,'-'),(336,338,'-')]} tells that the walk/path w1 contains the sequence starting at position 334 and ending at position 335, and the walk/path w2 contains the sequence starting at the offset 245 (ending 247) and crosses it a second time between position 336 and 338, and that the sequences are reversed one to each other. Note that any non-referenced walk in this field means that the node is not inside the given walk.")
 
 parser_offset.add_argument("file", type=str, help="Path to a gfa-like file")
 parser_offset.add_argument(
     "out", type=str, help="Output path (with extension)")
-
-## Subparser for paths_bubblegun_bfs ##
-
-parser_neighborhood: ArgumentParser = subparsers.add_parser(
-    'neighborhood', help="Extracts subgraph given a starting node\n"
-    "Given a node and a number of neighbors, attempts to extract paths, nodes and edges around the target node. Beware : if you select a node at one of the ends of the graph, you may stuck yourself in a infinite loop.")
-
-parser_neighborhood.add_argument(
-    "file", type=str, help="Path to a gfa-like file")
-parser_neighborhood.add_argument(
-    "out", type=str, help="Output path (with extension)")
-parser_neighborhood.add_argument(
-    '-s',
-    '--start_node',
-    type=str,
-    help='To specifiy a starting node on reference to create a subgraph',
-    nargs='+'
-)
-parser_neighborhood.add_argument("-c", "--count", type=int,
-                                 help="Number of nodes around each starting point")
 
 ## Subparser for linearize ##
 
@@ -236,14 +216,6 @@ def main() -> None:
         graph_against_fasta(args.file, gfa_version_info, args.pipeline)
     elif args.subcommands == 'offset':
         add_offsets_to_gfa(args.file, args.out, gfa_version_info)
-    elif args.subcommands == 'neighborhood':
-        graph: bGraph = bGraph(args.file)
-        for i, node in enumerate(args.start_node):
-            output: str = f"{args.out.split('.')[0]}_{i}.gfa" if len(
-                args.start_node) > 1 else args.out
-            nodes: set = bfs_step(graph, node, args.count)
-            paths_step(args.file, output, nodes,
-                       gfa_version_info, gfa_version_info)
     elif args.subcommands == 'stats':
         pgraph: pGraph = pGraph(
             args.file, gfa_version_info, with_sequence=True)

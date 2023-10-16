@@ -14,7 +14,7 @@ from json import dumps
 from gfagraphs import Graph
 
 
-def calculate_sequence_offsets(node_data: dict, walks: list) -> dict[str, dict]:
+def calculate_sequence_offsets(node_data: dict, walks: list) -> tuple[dict[str, dict[str, list[tuple]]], dict[str, list[tuple[int, int]]]]:
     """Given a set of paths, calculates the offsets within each path
 
     Args:
@@ -22,16 +22,20 @@ def calculate_sequence_offsets(node_data: dict, walks: list) -> dict[str, dict]:
         walks (list[Record]): the GFA walks
 
     Returns:
-        dict[str,dict]: a mapping node_name:{walk:offset_in_walk} for each walk, and for each node
+        tuple[dict[str, dict[str, list[tuple]]],dict[str,list[tuple[int,int]]]]: a mapping node_name:{walk:offset_in_walk} for each walk, and for each node + a mapping path name : coords of each node
     """
     sequence_offsets: dict[str, dict[str, list[tuple[int, int, str]]]] = {
         node_name: {} for node_name in node_data.keys()}
 
+    walk_offsets: dict = dict()
     for walk in walks:
         walk_name: str = walk.datas["name"]
+        offsets_of_items: list = list()
         start_offset: int = int(
             walk.datas['start_offset']) if 'start_offset' in walk.datas.keys() else 0
         for node, vect in walk.datas["path"]:
+            offsets_of_items.append(
+                (start_offset, start_offset+node_data[node]))
             if walk_name in sequence_offsets[node]:
                 # We already encountered the node in this path
                 sequence_offsets[node][walk_name].append(
@@ -41,8 +45,9 @@ def calculate_sequence_offsets(node_data: dict, walks: list) -> dict[str, dict]:
                 sequence_offsets[node][walk_name] = [
                     (start_offset, start_offset+node_data[node], vect.value)]
             start_offset += node_data[node]
+        walk_offsets[walk_name] = offsets_of_items
 
-    return sequence_offsets
+    return sequence_offsets, walk_offsets
 
 
 def add_offsets_to_gfa(gfa_file: str, output_file: str, gfa_version: str) -> None:
@@ -61,7 +66,7 @@ def add_offsets_to_gfa(gfa_file: str, output_file: str, gfa_version: str) -> Non
     nodes_offsets: list = calculate_sequence_offsets(
         nodes_information,
         embed_paths
-    )
+    )[0]
 
     with open(output_file, 'w', encoding='utf-8') as gfa_writer:
         with open(gfa_file, 'r', encoding='utf-8') as gfa_reader:

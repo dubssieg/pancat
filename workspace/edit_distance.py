@@ -313,10 +313,6 @@ class PathEdit:
         # Storing paths (association of ordered segment names and segment sequences)
         self.reference_path: list[tuple] = path_a
         self.query_path: list[tuple] = path_b
-        # Validation of coordinates before starting computing edition
-        # print(f"Length of path#1: {len(''.join(path_a.values()))}, length of path#2: {len(''.join(path_b.values()))}")
-        # if not len(''.join(path_a.values())) == len(''.join(path_b.values())):
-        #    raise ValueError(f"Path does not have the same length, probably not defining the same sequence ({len(''.join(path_a.values()))} vs. {len(''.join(path_b.values()))}).")
         self.compute_edition()
         self.counts = self.get_counts()
 
@@ -761,7 +757,6 @@ def perform_edition(
 
         # Iterating over paths
         for dpath in paths:
-            print(f"Working on {dpath}...")
             path_in_g1 = graph1.get_path(dpath)
             path_in_g2 = graph2.get_path(dpath)
 
@@ -797,7 +792,6 @@ def perform_edition(
             relations_counter["Splits"] = relations_counter[OverlapPrefixSuffix.__name__] + \
                 relations_counter[SuperPrefix.__name__] + \
                 relations_counter[SuperString.__name__]
-            print(relations_counter["Splits"])
             output.write(str(relations_counter))
 
             # If we ask to compute edition, we do it
@@ -810,7 +804,7 @@ def perform_edition(
                     output_folder, f"edited_graph_{Path(file_1).stem}_{Path(file_2).stem}.gfa"))
 
             del graph1, graph2
-    return relations_counter
+    return relations_counter, all_dipaths
 
 
 if __name__ == "__main__":
