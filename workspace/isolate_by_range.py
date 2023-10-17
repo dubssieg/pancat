@@ -7,7 +7,7 @@ from workspace.find_bubbles import common_members
 from tharospytools import path_allocator
 
 
-def range_isolate(gfa_file: str, gfa_ver: str, output: str, reference_name:str, start: int, stop: int) -> None:
+def range_isolate(gfa_file: str, gfa_ver: str, output: str, reference_name: str, start: int, stop: int) -> None:
     # Load graph in memory
     gfa_graph: Graph = Graph(
         gfa_file=gfa_file,
@@ -19,11 +19,11 @@ def range_isolate(gfa_file: str, gfa_ver: str, output: str, reference_name:str, 
     nodes_information: dict = {
         node.datas["name"]: len(node.datas["seq"]) for node in gfa_graph.segments
     }
-    sequence_offsets,walks_offsets: list = calculate_sequence_offsets(
+    sequence_offsets, walks_offsets = calculate_sequence_offsets(
         nodes_information,
         embed_paths
     )
-    
+
     # Getting sources and sinks
     all_sets = {
         path.datas['name']:
@@ -37,36 +37,37 @@ def range_isolate(gfa_file: str, gfa_ver: str, output: str, reference_name:str, 
             set(x) for x in all_sets.values()
         )
     )
-    mapping:dict = {}
+    mapping: dict = {}
     # This way does not work. we need to check positions relative to reference. See formulas in paper.
-    
 
-    node_set:set = set()
+    node_set: set = set()
     # Filtering walks
-    for walk_name,walk_sequence in walks_offsets.items():
-        path_to_edit:Walk|Path = gfa_graph.get_path(walk_name)
-        walk_start_index:int = 0
-        walk_stop_index:int = 0
-        for i,(x,y) in enumerate(walk_sequence):
-            if x<=start and y >= start:
+    for walk_name, walk_sequence in walks_offsets.items():
+        path_to_edit: Walk | Path = gfa_graph.get_path(walk_name)
+        walk_start_index: int = 0
+        walk_stop_index: int = 0
+        for i, (x, y) in enumerate(walk_sequence):
+            if x <= start and y >= start:
                 walk_start_index = i
                 path_to_edit.datas['start_offset'] = x
-            elif x<=stop and y>=stop:
+            elif x <= stop and y >= stop:
                 walk_stop_index = i
                 path_to_edit.datas['stop_offset'] = y
-        path_to_edit.datas['path'] = path_to_edit.datas['path'][walk_start_index,walk_stop_index]
+        path_to_edit.datas['path'] = path_to_edit.datas['path'][walk_start_index, walk_stop_index]
         # Retrieve nodes of walk, and adding them to the set
-        node_set.add([node for node,_ in path_to_edit.datas['path']])
-    
+        node_set.add([node for node, _ in path_to_edit.datas['path']])
+
     # Filtering nodes
-    gfa_graph.segments = [seg for seg in gfa_graph.segments if seg.datas['name'] in node_set]
+    gfa_graph.segments = [
+        seg for seg in gfa_graph.segments if seg.datas['name'] in node_set]
     # Adding coordinates
     for seg in gfa_graph.segments:
         seg.datas['PO'] = sequence_offsets[seg.datas['name']]
-    
+
     # Filtering edges
-    gfa_graph.lines = [line for line in gfa_graph.lines if line.datas['start'] in node_set and line.datas['end'] in node_set]
-        
+    gfa_graph.lines = [line for line in gfa_graph.lines if line.datas['start']
+                       in node_set and line.datas['end'] in node_set]
+
     # Allocate output path and write the file
     gfa_graph.save_graph(
         output_path=path_allocator(
