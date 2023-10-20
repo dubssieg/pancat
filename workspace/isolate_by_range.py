@@ -1,7 +1,6 @@
 "Requires PO tag to work."
-from argparse import ArgumentParser, SUPPRESS
-from collections import deque
-from gfagraphs import Segment, Graph, Walk, Path, GfaStyle
+from json import dumps
+from gfagraphs import Graph
 from workspace.offset_in_gfa import calculate_sequence_offsets
 from workspace.find_bubbles import common_members
 from tharospytools import path_allocator
@@ -19,7 +18,7 @@ def range_isolate(gfa_file: str, gfa_ver: str, output: str, reference_name: str,
     nodes_information: dict = {
         node.datas["name"]: len(node.datas["seq"]) for node in gfa_graph.segments
     }
-    sequence_offsets, walks_offsets = calculate_sequence_offsets(
+    sequence_offsets, _ = calculate_sequence_offsets(
         nodes_information,
         embed_paths
     )
@@ -37,32 +36,49 @@ def range_isolate(gfa_file: str, gfa_ver: str, output: str, reference_name: str,
             set(x) for x in all_sets.values()
         )
     )
-    mapping: dict = {}
-    # This way does not work. we need to check positions relative to reference. See formulas in paper.
+    # We filter true sources and sinks
+    mapping: dict = {x: sequence_offsets[x][reference_name][0] for x in bubbles_endpoints if all([len(
+        sequence_offsets[x][name]) == 1 for name in all_sets.keys()])}
+
+    source, penalty_source = False, float('inf')
+    sink, penalty_sink = False, float('inf')
+    for node_name, (offset_x, offset_y, _) in mapping.items():
+        if min(penalty_source, abs(start-offset_x)) == abs(start-offset_x):
+            penalty_source = abs(start-offset_x)
+            source = node_name
+        elif min(penalty_sink, abs(offset_y-stop)) == abs(offset_y-stop):
+            penalty_sink = abs(offset_y-stop)
+            sink = node_name
+
+    # We check we have valid source and sink
+    if not (source and sink):
+        raise ValueError(
+            "Please select other boundaries, as it was not possible to find appropriate source and sink.")
 
     node_set: set = set()
     # Filtering walks
-    for walk_name, walk_sequence in walks_offsets.items():
-        path_to_edit: Walk | Path = gfa_graph.get_path(walk_name)
+    for walk in embed_paths:
+        walk_name: str = walk.datas['name']
         walk_start_index: int = 0
         walk_stop_index: int = 0
-        for i, (x, y) in enumerate(walk_sequence):
-            if x <= start and y >= start:
+
+        for i, (node, _) in enumerate(walk.datas['path']):
+            if node == source:
                 walk_start_index = i
-                path_to_edit.datas['start_offset'] = x
-            elif x <= stop and y >= stop:
+                walk.datas['start_offset'] = sequence_offsets[node][walk_name][0][0]
+            elif node == sink:
                 walk_stop_index = i
-                path_to_edit.datas['stop_offset'] = y
-        path_to_edit.datas['path'] = path_to_edit.datas['path'][walk_start_index, walk_stop_index]
+                walk.datas['stop_offset'] = sequence_offsets[node][walk_name][0][1]
+        walk.datas['path'] = walk.datas['path'][walk_start_index:walk_stop_index]
         # Retrieve nodes of walk, and adding them to the set
-        node_set.add([node for node, _ in path_to_edit.datas['path']])
+        node_set |= set([node for node, _ in walk.datas['path']])
 
     # Filtering nodes
     gfa_graph.segments = [
         seg for seg in gfa_graph.segments if seg.datas['name'] in node_set]
     # Adding coordinates
     for seg in gfa_graph.segments:
-        seg.datas['PO'] = sequence_offsets[seg.datas['name']]
+        seg.datas['PO'] = dumps(sequence_offsets[seg.datas['name']])
 
     # Filtering edges
     gfa_graph.lines = [line for line in gfa_graph.lines if line.datas['start']

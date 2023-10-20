@@ -6,9 +6,8 @@ from os import stat
 from networkx import MultiDiGraph
 from BubbleGun.Graph import Graph as bGraph
 from gfagraphs import Graph as pGraph, supplementary_datas
-from workspace.isolate_by_range import isolate
+from workspace.isolate_by_range import range_isolate
 from workspace.offset_in_gfa import add_offsets_to_gfa
-from workspace.paths_bubblegun_bfs import bfs_step, paths_step
 from workspace.grapher import compute_stats, display_graph
 from workspace.reconstruct_sequences import reconstruct_paths, graph_against_fasta
 from workspace.edit_distance import perform_edition
@@ -210,8 +209,14 @@ def main() -> None:
     print(
         f"Working on file(s) {args.file} of respective detected formats {gfa_version_info}")
     if args.subcommands == 'isolate':
-        isolate(args.file, args.out, args.start, args.end,
-                gfa_version_info, args.reference)
+        range_isolate(
+            gfa_file=args.file,
+            gfa_ver=gfa_version_info,
+            output=args.out,
+            start=args.start,
+            stop=args.end,
+            reference_name=args.reference
+        )
     elif args.subcommands == 'complete':
         graph_against_fasta(args.file, gfa_version_info, args.pipeline)
     elif args.subcommands == 'offset':
