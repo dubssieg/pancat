@@ -78,7 +78,8 @@ def range_isolate(gfa_file: str, gfa_ver: str, output: str, reference_name: str,
         seg for seg in gfa_graph.segments if seg.datas['name'] in node_set]
     # Adding coordinates
     for seg in gfa_graph.segments:
-        seg.datas['PO'] = dumps(sequence_offsets[seg.datas['name']])
+        seg.datas['PO'] = dumps(
+            sequence_offsets[seg.datas['name']], indent=0, separators=(',', ':'))
 
     # Filtering edges
     gfa_graph.lines = [line for line in gfa_graph.lines if line.datas['start']

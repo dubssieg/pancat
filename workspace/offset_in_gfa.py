@@ -74,7 +74,7 @@ def add_offsets_to_gfa(gfa_file: str, output_file: str, gfa_version: str) -> Non
                 if line.startswith('S'):
                     node_name: str = line.split()[1]
                     gfa_writer.write(
-                        f"{line.strip()}\tPO:J:{dumps(nodes_offsets[node_name])}\n")
+                        f"{line.strip()}\tPO:J:{dumps(nodes_offsets[node_name],indent=0, separators=(',', ':'))}\n")
                 else:
                     gfa_writer.write(line)
 
