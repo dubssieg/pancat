@@ -7,7 +7,7 @@ from pathlib import Path
 from copy import deepcopy
 from indexed import IndexedOrderedDict
 from gfagraphs import Graph
-from tharospytools import revcomp
+from tharospytools.bio_tools import revcomp
 from workspace.grapher import display_graph
 
 

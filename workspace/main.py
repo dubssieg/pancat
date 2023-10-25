@@ -11,7 +11,7 @@ from workspace.offset_in_gfa import add_offsets_to_gfa
 from workspace.grapher import compute_stats, display_graph
 from workspace.reconstruct_sequences import reconstruct_paths, graph_against_fasta
 from workspace.edit_distance import perform_edition
-from workspace.bubble_seeker import linearize_bubbles
+from workspace.find_bubbles import linearize_bubbles
 from rich import print
 
 from rich.traceback import install

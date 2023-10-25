@@ -1,6 +1,8 @@
 from typing import Generator
 from gfagraphs import Graph
-from tharospytools import path_allocator, flatten, revcomp
+from tharospytools.bio_tools import revcomp
+from tharospytools.list_tools import flatten
+from tharospytools.path_tools import path_allocator
 
 
 def grouper(iterable, n=2, m=1):

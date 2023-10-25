@@ -3,7 +3,7 @@ from json import dumps
 from gfagraphs import Graph
 from workspace.offset_in_gfa import calculate_sequence_offsets
 from workspace.find_bubbles import common_members
-from tharospytools import path_allocator
+from tharospytools.path_tools import path_allocator
 
 
 def range_isolate(gfa_file: str, gfa_ver: str, output: str, reference_name: str, start: int, stop: int) -> None:

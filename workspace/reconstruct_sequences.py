@@ -1,7 +1,6 @@
 'Extract sequences given a graph'
-from typing import Generator
 from Bio import SeqIO
-from tharospytools import revcomp
+from tharospytools.bio_tools import revcomp
 from gfagraphs import Graph
 
 

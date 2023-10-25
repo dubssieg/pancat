@@ -4,7 +4,7 @@ from argparse import ArgumentParser, SUPPRESS
 from networkx import MultiDiGraph
 from pyvis.network import Network
 from gfagraphs import Graph
-from tharospytools import path_allocator
+from tharospytools.path_tools import path_allocator
 
 
 def display_graph(graph: MultiDiGraph, colors_paths: dict[str, str], annotations: dict, output_path: str) -> None:
