@@ -88,7 +88,6 @@ def graph_against_fasta(gfa_graph: str, gfa_version: str, pipeline_txt: str) -> 
                             for i in range(len(seq1)):
                                 if seq1[i] != seq2[i]:
                                     densities[round((i/len(seq1))*100)] += 1
-                                    # print(f"{i}#{seq1[i]}!={seq2[i]}")
                             if sum(densities) != 0:
                                 print(
                                     f"[{seq_name}] Sequence {record.id} and path have the same length ({len(seq1)}). {round((sum(densities)/len(seq1))*100,2)}% of base pairs are not shared.")

@@ -3,8 +3,10 @@ from argparse import ArgumentParser
 from sys import argv
 from os.path import exists
 from os import stat
+from json import dump
+from pathlib import Path
+from rich import print
 from networkx import MultiDiGraph
-from BubbleGun.Graph import Graph as bGraph
 from gfagraphs import Graph as pGraph, supplementary_datas
 from workspace.isolate_by_range import range_isolate
 from workspace.offset_in_gfa import add_offsets_to_gfa
@@ -12,7 +14,8 @@ from workspace.grapher import compute_stats, display_graph
 from workspace.reconstruct_sequences import reconstruct_paths, graph_against_fasta
 from workspace.edit_distance import perform_edition
 from workspace.find_bubbles import linearize_bubbles
-from rich import print
+from workspace.cyclotron import get_graph_cycles
+from tharospytools.path_tools import path_allocator
 
 from rich.traceback import install
 install(show_locals=True)
@@ -123,6 +126,26 @@ parser_reconstruct.add_argument(
 parser_reconstruct.add_argument(
     "--selection", type=str, help="Name(s) for the paths you want to reconstruct.", nargs='*', default=None)
 
+
+## Subparser for cyclotron ##
+
+parser_cycles: ArgumentParser = subparsers.add_parser(
+    'cycles', help="Extracts all cycles from the graph file, path by path.\n"
+    "It can return those as lists of nodes names, sequences, or lengths of chains."
+)
+
+parser_cycles.add_argument(
+    "file", type=str, help="Path to a gfa-like file")
+parser_cycles.add_argument(
+    "output", type=str, help="Path to folder or json file")
+parser_cycles.add_argument(
+    "-m",
+    "--mode",
+    help="Tells the return mode",
+    required=True,
+    choices=['names', 'sequences', 'lengths']
+)
+
 ## Subparser for edit_distance ##
 
 parser_edit: ArgumentParser = subparsers.add_parser(
@@ -217,6 +240,9 @@ def main() -> None:
             stop=args.end,
             reference_name=args.reference
         )
+    elif args.subcommands == 'cycles':
+        dump(get_graph_cycles(args.file, gfa_version_info, args.mode),
+             open(path_allocator(args.output, particle='.json', default_name=f"cycles_{Path(args.output).stem}"), mode='w', encoding='utf-8'), indent=4)
     elif args.subcommands == 'complete':
         graph_against_fasta(args.file, gfa_version_info, args.pipeline)
     elif args.subcommands == 'offset':
