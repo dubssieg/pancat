@@ -2,7 +2,7 @@
 from sys import version_info, stderr
 from setuptools import setup, find_packages
 
-NAME = 'pangraphs'
+NAME = 'pancat'
 CURRENT_PYTHON = version_info[:2]
 REQUIRED_PYTHON = (3, 10)
 
@@ -14,10 +14,10 @@ if CURRENT_PYTHON < REQUIRED_PYTHON:
 setup(
     name=NAME,
     version='0.1.1',
-    description='Tools for manipulating and visualising GFA file format',
-    url='https://github.com/Tharos-ux/gfatypes',
+    description='Tools for manipulating and visualizing GFA file format',
+    url='https://github.com/Tharos-ux/pancat',
     author='Tharos',
-    author_email='dubois.siegfried@gmail.com',
+    author_email='dubois.siegfried@inria.fr',
     packages=find_packages(),
     package_data={'': ['template.html']},
     include_package_data=True,
@@ -27,5 +27,5 @@ setup(
     long_description_content_type='text/markdown',
     install_requires=['matplotlib', 'seaborn', 'numpy', 'pyvis', 'networkx', 'mycolorpy', 'levenshtein',
                       'gfagraphs', 'tharos-pytools', 'BubbleGun', 'statsmodels', 'resource', 'Bio', 'rich'],
-    entry_points={'console_scripts': ['pangraphs=workspace.main:main']}
+    entry_points={'console_scripts': ['pancat=pancat.main:main']}
 )

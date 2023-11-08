@@ -242,7 +242,7 @@ def main() -> None:
         )
     elif args.subcommands == 'cycles':
         dump(get_graph_cycles(args.file, gfa_version_info, args.mode),
-             open(path_allocator(args.output, particle='.json', default_name=f"cycles_{Path(args.output).stem}"), mode='w', encoding='utf-8'), indent=4)
+             open(path_allocator(args.output, particle='.json', default_name=f"cycles_{Path(args.file).stem}"), mode='w', encoding='utf-8'), indent=4)
     elif args.subcommands == 'complete':
         graph_against_fasta(args.file, gfa_version_info, args.pipeline)
     elif args.subcommands == 'offset':
