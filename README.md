@@ -5,7 +5,9 @@
 [![](https://img.shields.io/badge/comments-done-green.svg)]()
 [![](https://img.shields.io/badge/build-passing-green.svg)]()
 
-# PANGRAPHS - GFA visualisation and exploration
+# PANCAT - PANgenome Comparison and Anlaysis Toolkit
+
+GFA visualization, comparaison, and exploration
 
 Implementations of many functions for performing various actions on GFA-like graphs in a command-line tool, such as extracting or offseting a pangenome graph. Is capable of comparing graphs topology between graphs that happen to contain the same set of sequences. Does pangenome graphs visualisation with interactive html files.
 Uses the [gfagraphs library](https://pypi.org/project/gfagraphs/) to load and manipulate pangenome graphs.
@@ -18,18 +20,18 @@ Details about implementation can be [found here](https://hal.science/hal-0421324
 Requires **python >=3.10**.
 
 ```bash
-git clone https://github.com/Tharos-ux/pangraphs.git
-cd pangraphs
+git clone https://github.com/Tharos-ux/pancat.git
+cd pancat
 pip install -r requirements.txt --upgrade
 python -m pip install . --quiet
 ```
 
 ## Quick start : provided commands
 
-This program is a collection of tools. Not every function or script is accessible through the front-end `pangraphs`, but this front-end showcase what the tools can do.
+This program is a collection of tools. Not every function or script is accessible through the front-end `pancat`, but this front-end showcase what the tools can do.
 Other tools are in the `scripts` folder. 
 
-Are available through `pangraphs`:
+Are available through `pancat`:
 
 - **grapher** creates interactive graph representation from a GFA file
 - **stats** gathers basic stats from the input GFA file
@@ -44,7 +46,7 @@ Are available through `pangraphs`:
 With this command, you can create a html interactive view of your graph, with sequence in the nodes (S-lines) and nodes connected by edges (L-lines). If additional information is given (as such as W-lines or P-lines), supplementary edges will be drawn in order to show the path that the genomes follows in the graph.
 
 ```bash
-pangraphs grapher [-h] [-b BOUNDARIES [BOUNDARIES ...]] file output
+pancat grapher [-h] [-b BOUNDARIES [BOUNDARIES ...]] file output
 
 positional arguments:
   file                  Path to a gfa-like file
@@ -57,7 +59,7 @@ options:
                         and one for nodes in range 2001-inf bp).
 ```
 
-When using this command, please only work with graphs with under 10k nodes. To do so, you may flatten the graph or extract subgraphs (using for instance **pangraphs neighborhood** or **pangraphs isolate**).
+When using this command, please only work with graphs with under 10k nodes. To do so, you may flatten the graph or extract subgraphs (using for instance **pancat neighborhood** or **pancat isolate**).
 
 The `-b`/`--boundaries` option lets you choose size classes to differentiate. They will have a different color, and their number will be computed separately.
 
@@ -68,7 +70,7 @@ The `output` argument may be : a path to a folder (existing or not) or a path to
 With this command, you can output basic stats on your graph.
 
 ```bash
-pangraphs stats [-h] [-b BOUNDARIES [BOUNDARIES ...]] file
+pancat stats [-h] [-b BOUNDARIES [BOUNDARIES ...]] file
 
 positional arguments:
   file                  Path to a gfa-like file
@@ -80,7 +82,7 @@ options:
                         and one for nodes in range 2001-inf bp).
 ```
 
-This program displays stats in command-line (stdout). You may pipe it to a file if you want to use it on a cluster. (pangraphs stats graph.gfa > out.txt)
+This program displays stats in command-line (stdout). You may pipe it to a file if you want to use it on a cluster. (pancat stats graph.gfa > out.txt)
 
 The `-b`/`--boundaries` option lets you choose size classes to differentiate. Their number will be computed separately.
 
@@ -89,7 +91,7 @@ The `-b`/`--boundaries` option lets you choose size classes to differentiate. Th
 With this command, you can reconstruct linear sequences from the graph.
 
 ```bash
-pangraphs reconstruct [-h] -r REFERENCE [--start START] [--stop STOP] [-s] file out
+pancat reconstruct [-h] -r REFERENCE [--start START] [--stop STOP] [-s] file out
 
 positional arguments:
   file                  Path to a gfa-like file
@@ -111,7 +113,7 @@ For this function, the `-r`/`--reference` option is needed only if you specify s
 With this command, you ca add a JSON GFA-compatible string to each S-line of the graph (each node). This field will contain starting position, ending position and orientation, for each path in the graph.
 
 ```bash
-pangraphs offset [-h] file out
+pancat offset [-h] file out
 
 positional arguments:
   file        Path to a gfa-like file
@@ -128,7 +130,7 @@ options:
 With this function, you can extract the *n* closest nodes from a node, keeping topology and informations about the selected nodes, creating a subgaph.
 
 ```bash
-pangraphs neighborhood [-h] [-s START_NODE [START_NODE ...]] [-c COUNT] file out
+pancat neighborhood [-h] [-s START_NODE [START_NODE ...]] [-c COUNT] file out
 
 positional arguments:
   file                  Path to a gfa-like file
@@ -144,10 +146,10 @@ options:
 
 ### By starting and ending position
 
-With this function, you need to have coordinates in your input GFA, meaning you need to use `pangraphs offset` beforehand.
+With this function, you need to have coordinates in your input GFA, meaning you need to use `pancat offset` beforehand.
 
 ```bash
-pangraphs isolate [-h] [-s START] [-e END] [-r REFERENCE] file out
+pancat isolate [-h] [-s START] [-e END] [-r REFERENCE] file out
 
 positional arguments:
   file                  Path to a gfa-like file
@@ -173,7 +175,7 @@ In order to compare two graphs, they need to :
 If those criteria are met, you may compare your graphs.
 
 ```bash
-pangraphs edit [-h] -o OUTPUT_FOLDER [-p] file [file ...]
+pancat edit [-h] -o OUTPUT_FOLDER [-p] file [file ...]
 
 positional arguments:
   file                  Path(s) to two or more gfa-like file(s).
