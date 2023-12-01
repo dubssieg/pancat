@@ -2,7 +2,7 @@
 [![](https://img.shields.io/badge/python-3.11-blue.svg)]()
 [![](https://img.shields.io/badge/python-3.12-blue.svg)]()
 [![](https://img.shields.io/badge/documentation-unfinished-orange.svg)]()
-[![](https://img.shields.io/badge/docs-in progress-orange.svg)]()
+[![https://tharos-ux.github.io/pangenome-notes/](https://img.shields.io/badge/docs-unfinished-orange.svg)]()
 
 # PANCAT - PANgenome Comparison and Anlaysis Toolkit
 
