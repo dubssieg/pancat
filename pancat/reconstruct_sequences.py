@@ -1,10 +1,10 @@
 'Extract sequences given a graph'
 from Bio import SeqIO
 from tharospytools.bio_tools import revcomp
-from gfagraphs import Graph
+from pgGraphs import Graph
 
 
-def reconstruct_paths(gfa_file: str, gfa_version: str, selected_paths: list | None = None) -> dict:
+def reconstruct_paths(gfa_file: str, selected_paths: list | None = None) -> dict:
     """Given a GFA file with paths, follows those paths to reconstruct the linear sequences
 
     Args:
@@ -14,60 +14,32 @@ def reconstruct_paths(gfa_file: str, gfa_version: str, selected_paths: list | No
     Raises:
         ValueError: if no path in graph
 
-    Yields:
-        Generator: mapping between path name and sequence
+    Returns:
+        dict: mapping between path name and sequence
     """
     gfa_graph: Graph = Graph(
         gfa_file=gfa_file,
-        gfa_type=gfa_version,
         with_sequence=True
     )
-    if len(graph_paths := gfa_graph.get_path_list()) > 0:
-        paths_to_reconstruct: list = [
-            path for path in graph_paths if path.datas["name"] in selected_paths] if selected_paths else graph_paths
-        return {path.datas["name"]: [
-            gfa_graph.get_sequence(x) if vect.value == '+' else revcomp(
-                gfa_graph.get_sequence(x)
-            ) for x, vect in path.datas["path"]
-        ] for path in paths_to_reconstruct}
+    if len(gfa_graph.paths) > 0:
+        paths_to_reconstruct: dict = {
+            path_name: path_datas for path_name, path_datas in gfa_graph.paths.items() if path_name in selected_paths
+        } if selected_paths else gfa_graph.paths
+        return {path_name: [
+            gfa_graph.segments[x]['seq'] if vect.value == '+' else revcomp(
+                gfa_graph.segments[x]['seq']
+            ) for x, vect in path_datas["path"]
+        ] for path_name, path_datas in paths_to_reconstruct.items()}
     else:
         raise ValueError(
             "Graph has no embed paths. Could'nt determine what to reconstruct!"
         )
 
 
-def hard_reconstruct(gfa_file: str, gfa_version: str) -> dict:
-    """Given a GFA file with paths, follows those paths to reconstruct the linear sequences
-
-    Args:
-        gfa_file (str): gfa graph file, with paths
-        gfa_version (str): the version of the file
-
-    Raises:
-        ValueError: if no path in graph
-
-    Yields:
-        Generator: mapping between path name and sequence
-    """
-    gfa_graph: Graph = Graph(
-        gfa_file=gfa_file,
-        gfa_type=gfa_version,
-        with_sequence=True
-    )
-    if len(graph_paths := gfa_graph.get_path_list()) > 0:
-        return {path.datas["name"]: [
-            gfa_graph.get_sequence(x) if vect.value == '+' else revcomp(gfa_graph.get_sequence(x)) for x, vect in path.datas["path"]
-        ] for path in graph_paths}
-    else:
-        raise ValueError(
-            "Graph has no embed paths. Could'nt determine what to reconstruct!"
-        )
-
-
-def graph_against_fasta(gfa_graph: str, gfa_version: str, pipeline_txt: str) -> bool:
+def graph_against_fasta(gfa_graph: str, pipeline_txt: str) -> bool:
     with open(pipeline_txt, 'r', encoding='utf-8') as pipeline:
         lines = pipeline.readlines()
-        reconstruction: dict = hard_reconstruct(gfa_graph, gfa_version)
+        reconstruction: dict = reconstruct_paths(gfa_graph)
         complete_pangenome_graph: list[bool] = [
             False for _ in range(len(lines))]
         for y, line in enumerate(lines):

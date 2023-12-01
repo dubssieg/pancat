@@ -45,7 +45,7 @@ def event_score(
     return scores[event_type]*value
 
 
-def get_backbone(files: list, versions: list, with_sequences: bool = False) -> Generator:
+def get_backbone(files: list, versions: list, with_sequences: bool = True) -> Generator:
     """Iterates through pairs of files, computes their graphs to extract nodes positions and paths
 
     Args:
@@ -251,7 +251,7 @@ def compare_positions(
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
                         events["Shift A -> B"]['number'] += 1
                         combined_view.add_edge(
-                            name_a, name_b, color='darkgreen', label="S", weight=0.5, title=(score := event_score(Event.SHIFT, abs(end_a-start_b))))
+                            name_a, name_b, color='darkgreen', label="O", weight=0.5, title=(score := event_score(Event.SHIFT, abs(end_a-start_b))))
                         report.write(
                             f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tS\t{False}\t{score}\t{ambiguous}\n")
                 elif start_b < start_a and end_b < end_a and end_b != start_a and start_a < end_b:
@@ -269,7 +269,7 @@ def compare_positions(
                     if not combined_view.has_edge(name_a, name_b) and not combined_view.has_edge(name_b, name_a):
                         events["Shift B -> A"]['number'] += 1
                         combined_view.add_edge(
-                            name_b, name_a, color='darkgreen', label="S", weight=0.5, title=(score := event_score(Event.SHIFT, abs(end_b-start_a))))
+                            name_b, name_a, color='darkgreen', label="O", weight=0.5, title=(score := event_score(Event.SHIFT, abs(end_b-start_a))))
                         report.write(
                             f"{name}\t{name_a}\t{start_a}\t{end_a}\t{name_b}\t{start_b}\t{end_b}\tS\t{False}\t{score}\t{ambiguous}\n")
                 else:

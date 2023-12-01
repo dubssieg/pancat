@@ -1,5 +1,5 @@
 from typing import Generator
-from gfagraphs import Graph
+from pgGraphs import Graph
 from tharospytools.bio_tools import revcomp
 from tharospytools.list_tools import flatten
 from tharospytools.path_tools import path_allocator
@@ -28,18 +28,16 @@ def bubble_caller(gfa_graph: Graph) -> list[dict]:
         list[dict]: a list of mappings between paths names and the subchain in the bubble
                     one element per bubble
     """
-    gfa_paths: list = gfa_graph.get_path_list()
-
     all_sets = {
-        path.datas['name']:
+        path_name:
             [
-                node_name for node_name, _ in path.datas['path']
-        ]
-        for path in gfa_paths
+                node_name for node_name, _ in path_datas['path']
+            ]
+        for path_name, path_datas in gfa_graph.paths.items()
     }
 
     all_maps = {
-        path.datas['name']: path.datas['path'] for path in gfa_paths
+        path_name: path_datas['path'] for path_name, path_datas in gfa_graph.paths.items()
     }
 
     bubbles_endpoints: list = sorted(common_members(
@@ -52,14 +50,15 @@ def bubble_caller(gfa_graph: Graph) -> list[dict]:
     convergence: int = 0
     while (len(bubbles_endpoints) != convergence):
         convergence: int = len(bubbles_endpoints)
-        bubbles: list[dict] = [{}
-                               for _ in range(len(bubbles_endpoints)-1)]
-        for path in gfa_paths:
+        bubbles: list[dict] = [
+            {} for _ in range(len(bubbles_endpoints)-1)
+        ]
+        for path_name in gfa_graph.paths.keys():
             # Computing endpoint positions in list for each path
             endpoints_indexes: list = grouper(
                 [
                     all_sets[
-                        path.datas['name']
+                        path_name
                     ].index(
                         endpoint
                     ) for endpoint in bubbles_endpoints
@@ -68,8 +67,7 @@ def bubble_caller(gfa_graph: Graph) -> list[dict]:
             )
             # Getting bubble chains
             for i, (start, end) in enumerate(endpoints_indexes):
-                bubbles[i][path.datas['name']
-                           ] = all_sets[path.datas['name']][start:end]
+                bubbles[i][path_name] = all_sets[path_name][start:end]
 
             # Decompressing all paths
             embed_nodes: set = set(flatten(
@@ -82,11 +80,11 @@ def bubble_caller(gfa_graph: Graph) -> list[dict]:
     #  Extracting reading way
     oriented_bubbles: list[dict] = [{}
                                     for _ in range(len(bubbles_endpoints)-1)]
-    for path in gfa_paths:
+    for path_name in gfa_graph.paths.keys():
         endpoints_indexes: list = grouper(
             [
                 all_sets[
-                    path.datas['name']
+                    path_name
                 ].index(
                     endpoint
                 ) for endpoint in bubbles_endpoints
@@ -94,8 +92,8 @@ def bubble_caller(gfa_graph: Graph) -> list[dict]:
             2
         )
         for i, (start, end) in enumerate(endpoints_indexes):
-            oriented_bubbles[i][path.datas['name']
-                                ] = all_maps[path.datas['name']][start:end+1]
+            oriented_bubbles[i][path_name
+                                ] = all_maps[path_name][start:end+1]
     return oriented_bubbles
 
 
@@ -108,14 +106,17 @@ def call_variants(gfa_file: str, gfa_type: str) -> Generator:
     """
     gfa_graph: Graph = Graph(
         gfa_file=gfa_file,
-        gfa_type=gfa_type,
         with_sequence=True)
     bubbles: list[dict] = bubble_caller(gfa_graph=gfa_graph)
     for bubble in bubbles:
         yield {
             path_name: ''.join(
-                [gfa_graph.get_segment(node=node).datas['seq'] if orientation.value == '+' else revcomp(gfa_graph.get_segment(node=node).datas['seq'])
-                 for node, orientation in path_chain]
+                [
+                    gfa_graph.segments[node]['seq'] if orientation.value == '+' else revcomp(
+                        gfa_graph.segments[node]['seq']
+                    )
+                    for node, orientation in path_chain
+                ]
             ) for path_name, path_chain in bubble.items()
         }
 
@@ -144,7 +145,6 @@ def linearize_bubbles(gfa_file: str, gfa_type: str, output: str) -> Generator:
         output, particle=".gfa", default_name="graph")
     gfa_graph: Graph = Graph(
         gfa_file=gfa_file,
-        gfa_type=gfa_type,
         with_sequence=True)
     bubbles: list[dict] = bubble_caller(gfa_graph=gfa_graph)
     if any([not len(x) for bubble in bubbles for x in bubble.values()]):
@@ -154,13 +154,14 @@ def linearize_bubbles(gfa_file: str, gfa_type: str, output: str) -> Generator:
     # Init return graph
     output_graph: Graph = Graph(
         gfa_file=None,
-        gfa_type=gfa_type,
         with_sequence=True
     )
     output_graph.headers = gfa_graph.headers
     contained_nodes: set = set()
-    path_builder: dict = {path.datas["name"]: []
-                          for path in gfa_graph.get_path_list()}
+    path_builder: dict = {
+        path_name: []
+        for path_name in gfa_graph.paths.keys()
+    }
     # For each bubble, we compute new nodes
     for bubble in bubbles:
         for path_name, path_chain in bubble.items():
@@ -169,16 +170,16 @@ def linearize_bubbles(gfa_file: str, gfa_type: str, output: str) -> Generator:
                 path_chain)-1], path_chain[-1]
             for node, ori in [(source, ori_source), (sink, ori_sink)]:
                 if node not in contained_nodes:
-                    output_graph.add_node(node, gfa_graph.get_segment(node=node).datas['seq'] if ori.value == '+' else revcomp(
-                        gfa_graph.get_segment(node=node).datas['seq']))
+                    output_graph.add_node(node, gfa_graph.segments[node]['seq'] if ori.value == '+' else revcomp(
+                        gfa_graph.segments[node]['seq']))
                     contained_nodes.add(node)
 
             # if theres a central chain
             if len(chained) > 0:
                 # node + edge between source + new node and new node + sink
                 target: str = chained[0][0]
-                output_graph.add_node(target, ''.join([gfa_graph.get_segment(node=node).datas['seq'] if orientation.value == '+' else revcomp(
-                    gfa_graph.get_segment(node=node).datas['seq'])for node, orientation in chained]))
+                output_graph.add_node(target, ''.join([gfa_graph.segments[node]['seq'] if orientation.value == '+' else revcomp(
+                    gfa_graph.segments[node]['seq'])for node, orientation in chained]))
                 output_graph.add_edge(source, ori_source.value, target, '+')
                 output_graph.add_edge(target, '+', sink, ori_sink.value)
                 if len(path_builder[path_name]) == 0:

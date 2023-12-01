@@ -1,9 +1,9 @@
 [![](https://img.shields.io/badge/python-3.10-blue.svg)]()
 [![](https://img.shields.io/badge/python-3.11-blue.svg)]()
+[![](https://img.shields.io/badge/python-3.12-blue.svg)]()
 [![](https://img.shields.io/badge/documentation-unfinished-orange.svg)]()
 [![](https://img.shields.io/badge/wiki-nonexistent-red.svg)]()
 [![](https://img.shields.io/badge/comments-done-green.svg)]()
-[![](https://img.shields.io/badge/build-passing-green.svg)]()
 
 # PANCAT - PANgenome Comparison and Anlaysis Toolkit
 
@@ -14,6 +14,9 @@ Uses the [gfagraphs library](https://pypi.org/project/gfagraphs/) to load and ma
 Details about implementation can be [found here](https://hal.science/hal-04213245) (in french only, sorry).
 
 ![](https://media.discordapp.net/attachments/878301351753429072/1154788148577058886/Screenshot_from_2023-09-22_16-35-22.png)
+
+> [!NOTE]\
+> Want to contribute? Feel free to open a PR on an issue about a missing, buggy or incomplete feature!
 
 ## Installation
 

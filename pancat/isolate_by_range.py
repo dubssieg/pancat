@@ -1,26 +1,24 @@
 "Requires PO tag to work."
 from json import dumps
-from gfagraphs import Graph
+from pgGraphs import Graph
 from workspace.offset_in_gfa import calculate_sequence_offsets
 from workspace.find_bubbles import common_members
 from tharospytools.path_tools import path_allocator
 
 
-def range_isolate(gfa_file: str, gfa_ver: str, output: str, reference_name: str, start: int, stop: int) -> None:
+def range_isolate(gfa_file: str, output: str, reference_name: str, start: int, stop: int) -> None:
     # Load graph in memory
     gfa_graph: Graph = Graph(
         gfa_file=gfa_file,
-        gfa_type=gfa_ver,
         with_sequence=True
     )
     # Computing offsets
-    embed_paths: list = gfa_graph.get_path_list()
     nodes_information: dict = {
-        node.datas["name"]: len(node.datas["seq"]) for node in gfa_graph.segments
+        node_name: node_datas["length"] for node in gfa_graph.segments
     }
     sequence_offsets, _ = calculate_sequence_offsets(
         nodes_information,
-        embed_paths
+        gfa_graph.paths
     )
 
     # Getting sources and sinks
@@ -82,8 +80,10 @@ def range_isolate(gfa_file: str, gfa_ver: str, output: str, reference_name: str,
             sequence_offsets[seg.datas['name']], indent=0, separators=(',', ':'))
 
     # Filtering edges
-    gfa_graph.lines = [line for line in gfa_graph.lines if line.datas['start']
-                       in node_set and line.datas['end'] in node_set]
+    gfa_graph.lines = [
+        line for line in gfa_graph.lines if line.datas['start']
+        in node_set and line.datas['end'] in node_set
+    ]
 
     # Allocate output path and write the file
     gfa_graph.save_graph(

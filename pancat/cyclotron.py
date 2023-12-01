@@ -1,4 +1,4 @@
-from gfagraphs import Graph
+from pgGraphs import Graph
 from tharospytools.bio_tools import revcomp
 
 
@@ -16,14 +16,13 @@ def get_graph_cycles(gfa_file: str, gfa_ver: str, mode: str = 'names') -> dict:
 
     graph: Graph = Graph(
         gfa_file=gfa_file,
-        gfa_type=gfa_ver,
         with_sequence=True
     )
     cycles: dict = detect_cycles(graph)
     if mode == 'lengths':
-        return {name: [sum([len(graph.mapping[node]) for node, _ in chain]) for chain in chains] for name, chains in cycles.items()}
+        return {name: [sum([len(graph.segments[node]['length']) for node, _ in chain]) for chain in chains] for name, chains in cycles.items()}
     elif mode == 'sequences':
-        return {name: [[graph.mapping[node] if vect.value == '+' else revcomp(graph.mapping[node]) for node, vect in chain] for chain in chains] for name, chains in cycles.items()}
+        return {name: [[graph.segments[node]['seq'] if vect.value == '+' else revcomp(graph.segments[node]['seq']) for node, vect in chain] for chain in chains] for name, chains in cycles.items()}
     return {name: [[(node, vect.value) for node, vect in chain] for chain in chains] for name, chains in cycles.items()}
 
 
@@ -36,18 +35,17 @@ def detect_cycles_old(gfa_graph: Graph) -> dict[str, list]:
     Returns:
         dict[str,list]: a list of lists per path, featiring nodes names of each loop in graph
     """
-    all_paths: list = gfa_graph.get_path_list()
     chains: dict[str, list[list[str]]] = {
-        path.datas['name']: list() for path in all_paths}
-    for path in all_paths:
+        path: list() for path in gfa_graph.paths.keys()}
+    for path_name, path_datas in gfa_graph.paths.items():
         mappings: dict[str, list[int]] = {}
-        for i, (node, _) in enumerate(path.datas['path']):
+        for i, (node, _) in enumerate(path_datas['path']):
             if node not in mappings:
                 mappings[node] = [i]
             else:
-                chains[path.datas['name']].append(
-                    path.datas['path'][mappings[node][-1]:i])
-                for nd, _ in path.datas['path'][mappings[node][-1]:i]:
+                chains[path_name].append(
+                    path_datas['path'][mappings[node][-1]:i])
+                for nd, _ in path_datas['path'][mappings[node][-1]:i]:
                     if nd in mappings:
                         del mappings[nd]
                 mappings[node] = [i]
@@ -55,16 +53,15 @@ def detect_cycles_old(gfa_graph: Graph) -> dict[str, list]:
 
 
 def detect_cycles(gfa_graph: Graph) -> dict[str, list]:
-    all_paths: list = gfa_graph.get_path_list()
     chains: dict[str, list[list[str]]] = {
-        path.datas['name']: list() for path in all_paths}
+        path: list() for path in gfa_graph.paths.keys()}
     # We iterate over paths, resetting all counters
-    for path in all_paths:
+    for path_name, path_datas in gfa_graph.paths.items():
         mappings: dict[str, list[int]] = {
-            nd.datas['name']: 0 for nd in gfa_graph.segments}
-        iterations: list = [0 for _ in range(len(path.datas['path']))]
+            nd: 0 for nd in gfa_graph.segments.keys()}
+        iterations: list = [0 for _ in range(len(path_datas['path']))]
         # We construct the iteration list
-        for i, (node, _) in enumerate(path.datas['path']):
+        for i, (node, _) in enumerate(path_datas['path']):
             itr = mappings[node] + 1
             iterations[i] = itr
             mappings[node] = itr
