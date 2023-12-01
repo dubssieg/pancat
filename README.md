@@ -2,25 +2,25 @@
 [![](https://img.shields.io/badge/python-3.11-blue.svg)]()
 [![](https://img.shields.io/badge/python-3.12-blue.svg)]()
 [![](https://img.shields.io/badge/documentation-unfinished-orange.svg)]()
-[![](https://img.shields.io/badge/wiki-nonexistent-red.svg)]()
-[![](https://img.shields.io/badge/comments-done-green.svg)]()
+[![https://tharos-ux.github.io/pangenome-notes/](https://img.shields.io/badge/docs-unfinished-orange.svg)]()
 
 # PANCAT - PANgenome Comparison and Anlaysis Toolkit
 
-GFA visualization, comparaison, and exploration
-
-Implementations of many functions for performing various actions on GFA-like graphs in a command-line tool, such as extracting or offseting a pangenome graph. Is capable of comparing graphs topology between graphs that happen to contain the same set of sequences. Does pangenome graphs visualisation with interactive html files.
+Implementations of many functions for performing various actions on GFA-like graphs in a command-line tool, such as extracting or offseting a pangenome graph.
+Is capable of comparing graphs topology between graphs that happen to contain the same set of sequences. Does pangenome graphs visualisation with interactive html files.
 Uses the [gfagraphs library](https://pypi.org/project/gfagraphs/) to load and manipulate pangenome graphs.
 Details about implementation can be [found here](https://hal.science/hal-04213245) (in french only, sorry).
 
-![](https://media.discordapp.net/attachments/878301351753429072/1154788148577058886/Screenshot_from_2023-09-22_16-35-22.png)
+![](https://media.discordapp.net/attachments/874430800802754623/1180182798968033280/graph_big.png)
 
 > [!NOTE]\
 > Want to contribute? Feel free to open a PR on an issue about a missing, buggy or incomplete feature!
 
 ## Installation
 
-Requires **python >=3.10**.
+Requires **python $\geq$ 3.10**.
+
+Installation can be made with the following command line, and updates may be run using `just` (requires [just](https://github.com/casey/just))
 
 ```bash
 git clone https://github.com/Tharos-ux/pancat.git
@@ -36,13 +36,17 @@ Other tools are in the `scripts` folder.
 
 Are available through `pancat`:
 
-- **grapher** creates interactive graph representation from a GFA file
-- **stats** gathers basic stats from the input GFA file
-- **reconstruct** recreates the linear sequences from the graph
 - **offset** adds relative position information as a tag in GFA file
+- **grapher** creates interactive graph representation from a GFA file
+- **stats** gathers basic stats from the input GFA 
+- **complete** assesses if the graph is a complete pangenome graph (all genomes fully embedded in the graph)
+- **reconstruct** recreates the linear sequences from the graph
+- **edit** computes a edit distance between variation graphs
+
+Were available before (and will be back soon):
 - **isolate** extracts a subgraph from positions in the paths
 - **neigborhood** extracts a subgraph from a set of nodes around a node
-- **edit** computes a edit distance between variation graphs
+- **cycles** detect and (optionnally) linearizes all loops in graph
 
 ## Render interactive html view
 
@@ -126,69 +130,26 @@ options:
   -h, --help  show this help message and exit
 ```
 
-## Isolate a subgraph
-
-### By neighbors around a node
-
-With this function, you can extract the *n* closest nodes from a node, keeping topology and informations about the selected nodes, creating a subgaph.
-
-```bash
-pancat neighborhood [-h] [-s START_NODE [START_NODE ...]] [-c COUNT] file out
-
-positional arguments:
-  file                  Path to a gfa-like file
-  out                   Output path (with extension)
-
-options:
-  -h, --help            show this help message and exit
-  -s START_NODE [START_NODE ...], --start_node START_NODE [START_NODE ...]
-                        To specifiy a starting node on reference to create a subgraph
-  -c COUNT, --count COUNT
-                        Number of nodes around each starting point
-```
-
-### By starting and ending position
-
-With this function, you need to have coordinates in your input GFA, meaning you need to use `pancat offset` beforehand.
-
-```bash
-pancat isolate [-h] [-s START] [-e END] [-r REFERENCE] file out
-
-positional arguments:
-  file                  Path to a gfa-like file
-  out                   Output path (with extension)
-
-options:
-  -h, --help            show this help message and exit
-  -s START, --start START
-                        To specifiy a starting point (in bp) to create a subgraph
-  -e END, --end END     To specifiy a end point (in bp) to create a subgraph
-  -r REFERENCE, --reference REFERENCE
-                        To specifiy the path to follow
-```
-
-
 ## Compute edition between graphs
 
 In order to compare two graphs, they need to :
-+ have the same sequence content
-+ have the same number and names of paths
-+ the reconstruction of paths must yield the same sequences
++ have at least some shared paths
++ the reconstruction of those shared paths must yield the same sequences
 
 If those criteria are met, you may compare your graphs.
 
 ```bash
-pancat edit [-h] -o OUTPUT_FOLDER [-p] file [file ...]
+pancat edit [-h] -o OUTPUT_PATH [-g] [--selection [SELECTION ...]] graph_A graph_B
 
 positional arguments:
-  file                  Path(s) to two or more gfa-like file(s).
+  graph_A               Path to a GFA-like file.
+  graph_B               Path to a GFA-like file.
 
 options:
   -h, --help            show this help message and exit
-  -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
-                        Path to a folder for results.
-  -p, --perform_edition
-                        Asks to perform edition on graph and outputs it.
+  -o OUTPUT_PATH, --output_path OUTPUT_PATH
+                        Path to a .json output for results.
+  -g, --graph_level     Asks to perform edition computation at graph level.
+  --selection [SELECTION ...]
+                        Name(s) for the paths you want to reconstruct.
 ```
-
-The `-p`/`--perform_edition` applies the merge/split identified operations to the second loaded graph, to make it with the same segmentation as the first one.
