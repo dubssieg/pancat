@@ -1,5 +1,4 @@
 "Adapting BubbleGun bfs for yielding paths/walks"
-from argparse import ArgumentParser, SUPPRESS
 from collections import deque
 from BubbleGun.bfs import bfs
 from BubbleGun.Graph import Graph
@@ -73,44 +72,3 @@ def paths_step(origin_file: str, file_to_edit: str, extracted_nodes: set, gfa_ve
         case _:
             raise NotImplementedError(
                 "Functionnality currently not implemented.")
-
-
-if __name__ == '__main__':
-    parser = ArgumentParser(add_help=False)
-    parser.add_argument("file", type=str, help="Path to a gfa-like file")
-    parser.add_argument("out", type=str, help="Output path (with extension)")
-    parser.add_argument('-h', '--help', action='help', default=SUPPRESS,
-                        help='Extracts subgraphs from a GFA graph')
-    parser.add_argument(
-        "-g",
-        "--gfa_version",
-        help="Tells the GFA input style",
-        required=True,
-        choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
-    )
-    parser.add_argument(
-        "-o",
-        "--gfa_output",
-        help="Tells the GFA output style",
-        required=True,
-        choices=['rGFA', 'GFA1', 'GFA1.1', 'GFA1.2', 'GFA2']
-    )
-    parser.add_argument(
-        '-s',
-        '--start_node',
-        type=str,
-        help='To specifiy a starting node on reference to create a subgraph',
-        nargs='+'
-    )
-    parser.add_argument("-c", "--count", type=int,
-                        help="Number of nodes around each starting point")
-    args = parser.parse_args()
-
-    graph: Graph = Graph(args.file)
-    for i, node in enumerate(args.start_node):
-        output: str = f"{args.out.split('.')[0]}_{i}.gfa" if len(
-            args.start_node) > 1 else args.out
-        nodes: set = bfs_step(graph, node, args.count)
-        print(f"Selected {len(nodes)} nodes.")
-        paths_step(args.file, output, nodes,
-                   args.gfa_version, args.gfa_output)

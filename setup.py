@@ -13,7 +13,7 @@ if CURRENT_PYTHON < REQUIRED_PYTHON:
 
 setup(
     name=NAME,
-    version='0.1.1',
+    version='0.2.0',
     description='Tools for manipulating and visualizing GFA file format',
     url='https://github.com/Tharos-ux/pancat',
     author='Tharos',
@@ -25,7 +25,21 @@ setup(
     license="LICENSE",
     long_description=open("README.md", encoding='utf-8').read(),
     long_description_content_type='text/markdown',
-    install_requires=['matplotlib', 'seaborn', 'numpy', 'pyvis', 'networkx', 'mycolorpy', 'levenshtein',
-                      'gfagraphs', 'tharos-pytools', 'BubbleGun', 'statsmodels', 'resource', 'Bio', 'rich'],
+    install_requires=[
+        'matplotlib',
+        'seaborn',
+        'numpy',
+        'pyvis',
+        'networkx',
+        'mycolorpy',
+        'levenshtein',
+        'gfagraphs',
+        'tharos-pytools',
+        'BubbleGun',
+        'statsmodels',
+        'resource',
+        'Bio',
+        'rich'
+    ],
     entry_points={'console_scripts': ['pancat=pancat.main:main']}
 )
