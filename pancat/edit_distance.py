@@ -7,6 +7,7 @@ def perform_edition(
         gfa_A: str,
         gfa_B: str,
         output_path: str,
+        graph_level: bool,
         selection: list[str] | bool = True,
 ) -> tuple:
     """
@@ -17,9 +18,9 @@ def perform_edition(
         gfa_A (str): a path to a gfa file
         gfa_B (str): a path to another gfa file
         output_path (str): path where to store editions
+        graph_level (bool): asks to perform graph-level edition
         selection (list[str] | bool, optional):
             - if true, compute edition on intersection of paths at path-level.
-            - if false, compute edition at graph-level.
             - if a list[str], compute edition on specified paths
             Defaults to True.
 
@@ -30,7 +31,9 @@ def perform_edition(
     graph_B: Graph = Graph(gfa_file=gfa_B, with_sequence=True)
 
     results: dict = dict()
-    if selection:
+    if graph_level:
+        results = graph_level_edition(graph_A, graph_B)
+    else:
         # We compute the intersection of paths in both graphs
         path_intersect: set[str] = set(
             graph_A.paths.keys()).intersection(set(graph_B.paths.keys()))
@@ -43,11 +46,6 @@ def perform_edition(
             # We perform edition on shared paths, hoping the best for non-common paths \o/
             # (Best practice is to validate before if all paths are shared)
             results = path_level_edition(graph_A, graph_B, path_intersect)
-    else:
-        results = graph_level_edition()
-        raise NotImplementedError(
-            "Needs to be implemented, placeholder function"
-        )
     dump(results, open(output_path, 'w', encoding='utf-8'))
 
 
@@ -87,8 +85,16 @@ def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str])
 
             # We compute the next closest breakpoint
             global_pos = min(
-                pos_A+graph_A.segments[current_node_A]['length'],
-                pos_B+graph_B.segments[current_node_B]['length']
+                global_pos +
+                (
+                    graph_A.segments[current_node_A]
+                    ['length']-(global_pos-pos_A)
+                ),
+                global_pos +
+                (
+                    graph_B.segments[current_node_B]
+                    ['length']-(global_pos-pos_B)
+                )
             )
 
             # We added the interval to current positions
@@ -136,10 +142,10 @@ def graph_level_edition(graph_A: Graph, graph_B: Graph) -> set:
     graph_A.sequence_offsets()
     graph_B.sequence_offsets()
 
-    edition_results: set[set[tuple[str, int]]] = set()
+    edition_results: dict[list] = dict()
 
-    merges: set[int] = set()  # set for merges
-    splits: set[int] = set()  # set for merges
+    merges: set[frozenset[tuple[str, frozenset]]] = set()  # set for merges
+    splits: set[frozenset[tuple[str, frozenset]]] = set()  # set for merges
 
     # Iterating on each pair of paths
     for path_name in set(graph_A.paths.keys()).intersection(set(graph_B.paths.keys())):
@@ -160,8 +166,16 @@ def graph_level_edition(graph_A: Graph, graph_B: Graph) -> set:
 
             # We compute the next closest breakpoint
             global_pos = min(
-                pos_A+graph_A.segments[current_node_A]['length'],
-                pos_B+graph_B.segments[current_node_B]['length']
+                global_pos +
+                (
+                    graph_A.segments[current_node_A]['length'] -
+                    (global_pos-pos_A)
+                ),
+                global_pos +
+                (
+                    graph_B.segments[current_node_B]['length'] -
+                    (global_pos-pos_B)
+                )
             )
 
             # We added the interval to current positions
@@ -204,5 +218,16 @@ def graph_level_edition(graph_A: Graph, graph_B: Graph) -> set:
                     j += 1
                 case (False, False):
                     raise ValueError()
+
+    edition_results['merges'] = [
+        [
+            (path_name, [x for x in pos]) for path_name, pos in ext_fset
+        ] for ext_fset in merges
+    ]
+    edition_results['splits'] = [
+        [
+            (path_name, [x for x in pos]) for path_name, pos in ext_fset
+        ] for ext_fset in splits
+    ]
 
     return edition_results

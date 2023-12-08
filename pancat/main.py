@@ -143,7 +143,7 @@ parser_edit.add_argument(
 parser_edit.add_argument(
     "-o", "--output_path", required=True, type=str, help="Path to a .json output for results.")
 parser_edit.add_argument(
-    "-g", "--graph_level", help="Asks to perform edition computation at graph level.", action='store_true')
+    "-g", "--graph_level", help="Asks to perform edition computation at graph level.", action='store_true', default=False)
 parser_edit.add_argument(
     "--selection", type=str, help="Name(s) for the paths you want to reconstruct.", nargs='*', default=True)
 
@@ -259,7 +259,8 @@ def main() -> None:
             gfa_A=args.graph_A,
             gfa_B=args.graph_B,
             output_path=args.output_path,
-            selection=not args.graph_level or args.selection
+            graph_level=args.graph_level,
+            selection=args.selection
         )
 
     ##############################################################################
