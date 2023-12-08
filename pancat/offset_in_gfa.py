@@ -20,5 +20,6 @@ def add_offsets_to_gfa(gfa_file: str, output_file: str) -> None:
         output_file (str): output gfa file
         gfa_version (str): the user-assumed gfa subformat
     """
-    gfa_graph: Graph = Graph(gfa_file, with_sequence=True).sequence_offsets()
+    gfa_graph: Graph = Graph(gfa_file, with_sequence=True)
+    gfa_graph.sequence_offsets()
     gfa_graph.save_graph(output_file=output_file)
