@@ -145,7 +145,17 @@ parser_edit.add_argument(
 parser_edit.add_argument(
     "-g", "--graph_level", help="Asks to perform edition computation at graph level.", action='store_true', default=False)
 parser_edit.add_argument(
-    "--selection", type=str, help="Name(s) for the paths you want to reconstruct.", nargs='*', default=True)
+    "--selection", type=str, help="Name(s) for the paths you want to compute edition on.", nargs='*', default=True)
+
+## Subparser for unfold ##
+
+parser_edit: ArgumentParser = subparsers.add_parser(
+    'unfold', help="Break cycles of a graph with P-lines or W-lines.")
+
+parser_edit.add_argument(
+    "graph", type=str, help="Path to a >=GFA1-like file.")
+parser_edit.add_argument(
+    "-o", "--output_path", required=True, type=str, help="Path to a .gfa output for new graph.")
 
 
 #######################################
@@ -253,6 +263,21 @@ def main() -> None:
     ##############################################################################
     #                        REQUIRES IN-DEPTH TESING                            #
     ##############################################################################
+
+    elif args.subcommands == 'unfold':
+        graph_to_unfold: pgGraph = pgGraph(
+            gfa_file=args.graph,
+            with_sequence=True
+        )
+        graph_to_unfold.unfold()
+        graph_to_unfold.save_graph(
+            output_file=path_allocator(
+                path_to_validate=args.output_path,
+                particle='.gfa',
+                default_name='unfolded_graph',
+                always_yes=True
+            )
+        )
 
     elif args.subcommands == 'edit':
         perform_edition(
