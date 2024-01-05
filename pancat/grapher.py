@@ -81,6 +81,9 @@ def compute_stats(
         stats[f'Number of {low_bound} bp - {high_bound} bp'] = f"{number} ({round((number/len(graph.segments))*100,ndigits=2)}%)"
         stats[f'Size of {low_bound} bp - {high_bound} bp'] = f"{cum_size} ({round((cum_size/total_size)*100,ndigits=2)}%)"
     stats["Total size of segments"] = total_size
-    stats["Is graph acyclic"] = all([len(set([x for x, _ in path_datas["path"]])) == len(
-        path_datas["path"]) for path_datas in graph.paths.values])
+    try:
+        stats["Is graph acyclic"] = all([len(set([x for x, _ in path_datas["path"]])) == len(
+            path_datas["path"]) for path_datas in graph.paths.values])
+    except:
+        pass
     return stats

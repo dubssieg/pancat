@@ -216,7 +216,7 @@ def main() -> None:
         )
         display_graph(
             graph=pangenome_graph,
-            colors_paths=gfa_graph.colors,
+            colors_paths=gfa_graph.metadata['colors'],
             annotations=graph_stats,
             output_path=args.output
         )
