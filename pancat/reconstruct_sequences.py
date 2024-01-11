@@ -2,6 +2,7 @@
 from Bio import SeqIO
 from tharospytools.bio_tools import revcomp
 from pgGraphs import Graph
+from itertools import count
 
 
 def reconstruct_paths(gfa_file: str, selected_paths: list | None = None) -> dict:
