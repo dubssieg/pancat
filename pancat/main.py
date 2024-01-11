@@ -145,6 +145,8 @@ parser_edit.add_argument(
 parser_edit.add_argument(
     "-g", "--graph_level", help="Asks to perform edition computation at graph level.", action='store_true', default=False)
 parser_edit.add_argument(
+    "-c", "--cores", help="Number of cores for computing edition", type=int, default=1)
+parser_edit.add_argument(
     "--selection", type=str, help="Name(s) for the paths you want to compute edition on.", nargs='*', default=True)
 
 ## Subparser for unfold ##
@@ -285,7 +287,8 @@ def main() -> None:
             gfa_B=args.graph_B,
             output_path=args.output_path,
             graph_level=args.graph_level,
-            selection=args.selection
+            selection=args.selection,
+            cores=args.cores
         )
 
     ##############################################################################
