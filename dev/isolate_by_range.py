@@ -1,8 +1,8 @@
 "Requires PO tag to work."
 from json import dumps
 from pgGraphs import Graph
-from workspace.offset_in_gfa import calculate_sequence_offsets
-from workspace.find_bubbles import common_members
+from pancat.offset_in_gfa import calculate_sequence_offsets
+from pancat.find_bubbles import common_members
 from tharospytools.path_tools import path_allocator
 
 
@@ -14,12 +14,8 @@ def range_isolate(gfa_file: str, output: str, reference_name: str, start: int, s
     )
     # Computing offsets
     nodes_information: dict = {
-        node_name: node_datas["length"] for node in gfa_graph.segments
+        node_name: node_datas["length"] for node_name, node_datas in gfa_graph.segments.items()
     }
-    sequence_offsets, _ = calculate_sequence_offsets(
-        nodes_information,
-        gfa_graph.paths
-    )
 
     # Getting sources and sinks
     all_sets = {
