@@ -15,7 +15,6 @@ from pancat.reconstruct_sequences import reconstruct_paths, graph_against_fasta
 # TODO Testing
 from pancat.edit_distance import perform_edition
 # TODO Rebuilding
-from pangraphs.dev.isolate_by_range import range_isolate
 from pancat.find_bubbles import linearize_bubbles
 from pancat.cyclotron import get_graph_cycles
 
