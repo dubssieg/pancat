@@ -166,6 +166,7 @@ args = parser.parse_args()
 
 def main() -> None:
     "Main call for subprograms"
+    print("PANCAT initialisation sucessful!")
     if len(argv) == 1:
         print(
             "[dark_orange]You need to provide a command and its arguments for the program to work.\n"
