@@ -6,6 +6,18 @@ from pancat.find_bubbles import common_members
 from tharospytools.path_tools import path_allocator
 
 
+def unfold_isolate(gfa_file: str, output: str, start: int, stop: int, offset_sequence_name: str) -> None:
+    """Unfolds the cycles of the graph, and extracts the corresponding part
+
+    Args:
+        gfa_file (str): _description_
+        output (str): _description_
+        start (int): _description_
+        stop (int): _description_
+        offset_sequence_name (str): _description_
+    """
+
+
 def range_isolate(gfa_file: str, output: str, reference_name: str, start: int, stop: int) -> None:
     # Load graph in memory
     gfa_graph: Graph = Graph(
