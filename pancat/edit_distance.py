@@ -39,8 +39,10 @@ def perform_edition(
     results: dict = dict()
     if graph_level:
         if cores > 1:
+            print(f"Computing edition for graphs with {cores} threads")
             results = graph_level_edition_multiprocessing(graph_A, graph_B)
         else:
+            print("Computing edition for graphs on single thread")
             results = graph_level_edition(graph_A, graph_B)
     else:
         # We compute the intersection of paths in both graphs
@@ -51,19 +53,25 @@ def perform_edition(
             if not all([x in path_intersect for x in selection]):
                 raise ValueError()
             if cores > 1:
+                print(f"Computing edition for graphs with {cores} threads")
                 results = path_level_edition_multiprocessing(
                     graph_A, graph_B, set(selection))
             else:
+                print(f"Computing edition for graphs on single thread")
                 results = path_level_edition(graph_A, graph_B, set(selection))
         else:
             # We perform edition on shared paths, hoping the best for non-common paths \o/
             # (Best practice is to validate before if all paths are shared)
             if cores > 1:
+                print(f"Computing edition for graphs with {cores} threads")
                 results = path_level_edition_multiprocessing(
                     graph_A, graph_B, set(selection))
             else:
+                print(f"Computing edition for graphs on single thread")
                 results = path_level_edition(graph_A, graph_B, path_intersect)
+    print(f"Saving results")
     dump(results, open(output_path, 'w', encoding='utf-8'))
+    print(f"Job terminated sucessfully!")
 
 
 def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str]) -> dict:
@@ -318,6 +326,7 @@ def edit_single_path_graph_level(path_name: str, graph_A: Graph, graph_B: Graph)
     Returns:
         tuple[set]: (merges, splits)
     """
+    print(f"Working on {path_name}")
 
     merges: set[frozenset[tuple[str, frozenset]]] = set()  # set for merges
     splits: set[frozenset[tuple[str, frozenset]]] = set()  # set for splits
@@ -390,6 +399,7 @@ def edit_single_path_graph_level(path_name: str, graph_A: Graph, graph_B: Graph)
                 j += 1
             case (False, False):
                 raise ValueError()
+    print(f"Edition sucessfully completed for {path_name}")
     return (merges, splits)
 
 
@@ -434,6 +444,7 @@ def edit_single_path_path_level(path_name: str, graph_A: Graph, graph_B: Graph) 
     Returns:
         dict: editions
     """
+    print(f"Working on {path_name}")
 
     i: int = 0  # counter of segmentations on graph_A
     j: int = 0  # counter of segmentations on graph_B
@@ -486,7 +497,7 @@ def edit_single_path_path_level(path_name: str, graph_A: Graph, graph_B: Graph) 
                 j += 1
             case (False, False):
                 raise ValueError()
-
+    print(f"Edition sucessfully completed for {path_name}")
     return {
         'merges': sorted(list(merges)),
         'splits': sorted(list(splits))

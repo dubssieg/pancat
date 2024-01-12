@@ -1,6 +1,5 @@
 "Creates a graph we can navigate in."
 from os import path, remove
-from argparse import ArgumentParser, SUPPRESS
 from networkx import MultiDiGraph
 from pyvis.network import Network
 from pgGraphs import Graph
