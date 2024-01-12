@@ -15,7 +15,7 @@ from pancat.reconstruct_sequences import reconstruct_paths, graph_against_fasta
 # TODO Testing
 from pancat.edit_distance import perform_edition
 # TODO Rebuilding
-from pancat.isolate_by_range import range_isolate
+from pangraphs.dev.isolate_by_range import range_isolate
 from pancat.find_bubbles import linearize_bubbles
 from pancat.cyclotron import get_graph_cycles
 
@@ -296,13 +296,15 @@ def main() -> None:
     ##############################################################################
 
     elif args.subcommands == 'isolate':
+        """
         range_isolate(
             gfa_file=args.file,
             output=args.out,
             start=args.start,
             stop=args.end,
-            reference_name=args.reference
-        )
+            reference_name=args.reference)
+        """
+        raise NotImplementedError()
 
     elif args.subcommands == 'linearize':
         "TODO: better detection of cycles (buggy for now) / already done by GFAffix in part"

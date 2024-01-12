@@ -32,6 +32,10 @@ def perform_edition(
     graph_A: Graph = Graph(gfa_file=gfa_A, with_sequence=True)
     graph_B: Graph = Graph(gfa_file=gfa_B, with_sequence=True)
 
+    # Prints out names of paths (for debugging purposes)
+    print('Paths of Graph_A', ', '.join(graph_A.paths.keys()))
+    print('Paths of Graph_B', ', '.join(graph_B.paths.keys()))
+
     results: dict = dict()
     if graph_level:
         if cores > 1:
