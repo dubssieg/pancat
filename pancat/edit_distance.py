@@ -1,7 +1,10 @@
 "Computes edition between pangenome graphs"
 from json import dump
 from pgGraphs import Graph
+from logging import info
 from tharospytools.multithreading import futures_collector
+from tharospytools.logging_tools import logs_config
+from datetime import datetime
 
 
 def perform_edition(
@@ -29,13 +32,14 @@ def perform_edition(
     Returns:
         tuple: results from the edition
     """
+    logs_config(verbose=True)
     graph_A: Graph = Graph(
         gfa_file=gfa_A, with_sequence=False, low_memory=True)
-    print(f"Loaded graphe {gfa_A} in memory")
+    info(f"Loaded graph {gfa_A} in memory")
     print('Paths of Graph_A', ', '.join(graph_A.paths.keys()))
     graph_B: Graph = Graph(
         gfa_file=gfa_B, with_sequence=False, low_memory=True)
-    print(f"Loaded graphe {gfa_B} in memory")
+    info(f"Loaded graph {gfa_B} in memory")
     print('Paths of Graph_B', ', '.join(graph_B.paths.keys()))
 
     # Prints out names of paths (for debugging purposes)
@@ -43,10 +47,10 @@ def perform_edition(
     results: dict = dict()
     if graph_level:
         if cores > 1:
-            print(f"Computing edition for graphs with {cores} threads")
+            info(f"Computing edition for graphs with {cores} threads")
             results = graph_level_edition_multiprocessing(graph_A, graph_B)
         else:
-            print("Computing edition for graphs on single thread")
+            info("Computing edition for graphs on single thread")
             results = graph_level_edition(graph_A, graph_B)
     else:
         # We compute the intersection of paths in both graphs
@@ -57,25 +61,25 @@ def perform_edition(
             if not all([x in path_intersect for x in selection]):
                 raise ValueError()
             if cores > 1:
-                print(f"Computing edition for graphs with {cores} threads")
+                info(f"Computing edition for graphs with {cores} threads")
                 results = path_level_edition_multiprocessing(
                     graph_A, graph_B, set(selection))
             else:
-                print(f"Computing edition for graphs on single thread")
+                info(f"Computing edition for graphs on single thread")
                 results = path_level_edition(graph_A, graph_B, set(selection))
         else:
             # We perform edition on shared paths, hoping the best for non-common paths \o/
             # (Best practice is to validate before if all paths are shared)
             if cores > 1:
-                print(f"Computing edition for graphs with {cores} threads")
+                info(f"Computing edition for graphs with {cores} threads")
                 results = path_level_edition_multiprocessing(
                     graph_A, graph_B, path_intersect)
             else:
-                print(f"Computing edition for graphs on single thread")
+                info(f"Computing edition for graphs on single thread")
                 results = path_level_edition(graph_A, graph_B, path_intersect)
-    print(f"Saving results")
+    info(f"Saving results in {output_path}")
     dump(results, open(output_path, 'w', encoding='utf-8'))
-    print(f"Job terminated sucessfully!")
+    info(f"Job terminated sucessfully!")
 
 
 def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str]) -> dict:
@@ -330,7 +334,7 @@ def edit_single_path_graph_level(path_name: str, graph_A: Graph, graph_B: Graph)
     Returns:
         tuple[set]: (merges, splits)
     """
-    print(f"Working on {path_name}")
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Working on {path_name}")
 
     merges: set[frozenset[tuple[str, frozenset]]] = set()  # set for merges
     splits: set[frozenset[tuple[str, frozenset]]] = set()  # set for splits
@@ -403,7 +407,7 @@ def edit_single_path_graph_level(path_name: str, graph_A: Graph, graph_B: Graph)
                 j += 1
             case (False, False):
                 raise ValueError()
-    print(f"Edition sucessfully completed for {path_name}")
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Edition sucessfully completed for {path_name}")
     return (merges, splits)
 
 
@@ -448,7 +452,7 @@ def edit_single_path_path_level(path_name: str, graph_A: Graph, graph_B: Graph) 
     Returns:
         dict: editions
     """
-    print(f"Working on {path_name}")
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Working on {path_name}")
 
     i: int = 0  # counter of segmentations on graph_A
     j: int = 0  # counter of segmentations on graph_B
@@ -501,7 +505,7 @@ def edit_single_path_path_level(path_name: str, graph_A: Graph, graph_B: Graph) 
                 j += 1
             case (False, False):
                 raise ValueError()
-    print(f"Edition sucessfully completed for {path_name}")
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Edition sucessfully completed for {path_name}")
     return {
         'merges': sorted(list(merges)),
         'splits': sorted(list(splits))
