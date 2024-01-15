@@ -29,12 +29,14 @@ def perform_edition(
     Returns:
         tuple: results from the edition
     """
-    graph_A: Graph = Graph(gfa_file=gfa_A, with_sequence=True)
-    graph_B: Graph = Graph(gfa_file=gfa_B, with_sequence=True)
+    graph_A: Graph = Graph(gfa_file=gfa_A, with_sequence=False)
+    print(f"Loaded graphe {gfa_A} in memory")
+    print('Paths of Graph_A', ', '.join(graph_A.paths.keys()))
+    graph_B: Graph = Graph(gfa_file=gfa_B, with_sequence=False)
+    print(f"Loaded graphe {gfa_B} in memory")
+    print('Paths of Graph_B', ', '.join(graph_B.paths.keys()))
 
     # Prints out names of paths (for debugging purposes)
-    print('Paths of Graph_A', ', '.join(graph_A.paths.keys()))
-    print('Paths of Graph_B', ', '.join(graph_B.paths.keys()))
 
     results: dict = dict()
     if graph_level:
@@ -65,7 +67,7 @@ def perform_edition(
             if cores > 1:
                 print(f"Computing edition for graphs with {cores} threads")
                 results = path_level_edition_multiprocessing(
-                    graph_A, graph_B, set(selection))
+                    graph_A, graph_B, path_intersect)
             else:
                 print(f"Computing edition for graphs on single thread")
                 results = path_level_edition(graph_A, graph_B, path_intersect)
