@@ -29,10 +29,12 @@ def perform_edition(
     Returns:
         tuple: results from the edition
     """
-    graph_A: Graph = Graph(gfa_file=gfa_A, with_sequence=False)
+    graph_A: Graph = Graph(
+        gfa_file=gfa_A, with_sequence=False, low_memory=True)
     print(f"Loaded graphe {gfa_A} in memory")
     print('Paths of Graph_A', ', '.join(graph_A.paths.keys()))
-    graph_B: Graph = Graph(gfa_file=gfa_B, with_sequence=False)
+    graph_B: Graph = Graph(
+        gfa_file=gfa_B, with_sequence=False, low_memory=True)
     print(f"Loaded graphe {gfa_B} in memory")
     print('Paths of Graph_B', ', '.join(graph_B.paths.keys()))
 
