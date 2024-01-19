@@ -148,7 +148,9 @@ parser_edit.add_argument(
 parser_edit.add_argument(
     "-c", "--cores", help="Number of cores for computing edition", type=int, default=1)
 parser_edit.add_argument(
-    "--selection", type=str, help="Name(s) for the paths you want to compute edition on.", nargs='*', default=True)
+    "-s", "--selection", type=str, help="Name(s) for the paths you want to compute edition on.", nargs='*', default=True)
+parser_edit.add_argument(
+    "-t", "--trace_memory", help="Print to log file memory usage of data structures.", action='store_true', default=False)
 
 ## Subparser for unfold ##
 
