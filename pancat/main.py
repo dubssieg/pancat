@@ -294,6 +294,7 @@ def main() -> None:
             selection=args.selection,
             cores=args.cores,
             end_pattern=args.pattern,
+            trace_memory=args.trace_memory,
         )
 
     ##############################################################################
