@@ -13,3 +13,4 @@ resource
 Bio
 rich
 indexed
+psutil

@@ -3,9 +3,10 @@ from json import dump
 from pgGraphs import Graph
 from logging import info
 from tharospytools.multithreading import futures_collector
-from tharospytools.logging_tools import get_memory_usage
 from tharospytools.logging_tools import logs_config
 from datetime import datetime
+from os import getpid
+from psutil import Process
 
 
 def perform_edition(
@@ -36,6 +37,8 @@ def perform_edition(
         tuple: results from the edition
     """
     logs_config(verbose=True)
+    base_interpeter_memory: int = Process(
+        getpid()).memory_info().rss / 1024 ** 2
     graph_A: Graph = Graph(
         gfa_file=gfa_A,
         with_sequence=False,
@@ -43,8 +46,6 @@ def perform_edition(
         end_pattern_exclusion=end_pattern
     )
     info(f"Loaded graph {gfa_A} in memory")
-    if trace_memory:
-        info(f"Graph {gfa_A} takes {get_memory_usage(graph_A)} bytes in memory")
     print('Paths of Graph_A', ', '.join(graph_A.paths.keys()))
     graph_B: Graph = Graph(
         gfa_file=gfa_B,
@@ -53,9 +54,10 @@ def perform_edition(
         end_pattern_exclusion=end_pattern
     )
     info(f"Loaded graph {gfa_B} in memory")
-    if trace_memory:
-        info(f"Graph {gfa_B} takes {get_memory_usage(graph_B)} bytes in memory")
     print('Paths of Graph_B', ', '.join(graph_B.paths.keys()))
+    if trace_memory:
+        info(
+            f"Graph loading Python interpreter memory consumption: {(Process(getpid()).memory_info().rss / 1024 ** 2)-base_interpeter_memory} Mb used")
 
     # Prints out names of paths (for debugging purposes)
 
@@ -111,6 +113,7 @@ def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str])
     """
     edition_results: dict = dict()
 
+    print(f"PATH SELECTION: {selected_paths}")
     # Iterating on each pair of paths
     for path_name in selected_paths:
 
@@ -195,8 +198,11 @@ def graph_level_edition(graph_A: Graph, graph_B: Graph) -> set:
     merges: set[frozenset[tuple[str, frozenset]]] = set()  # set for merges
     splits: set[frozenset[tuple[str, frozenset]]] = set()  # set for splits
 
+    intersect: set = set(graph_A.paths.keys()).intersection(
+        set(graph_B.paths.keys()))
+    print(f"PATH INTERSECTION: {intersect}")
     # Iterating on each pair of paths
-    for path_name in set(graph_A.paths.keys()).intersection(set(graph_B.paths.keys())):
+    for path_name in intersect:
 
         i: int = 0  # counter of segmentations on graph_A
         j: int = 0  # counter of segmentations on graph_B
@@ -302,6 +308,9 @@ def graph_level_edition_multiprocessing(graph_A: Graph, graph_B: Graph) -> set:
     merges: set[frozenset[tuple[str, frozenset]]] = set()  # set for merges
     splits: set[frozenset[tuple[str, frozenset]]] = set()  # set for splits
 
+    intersect: set = set(graph_A.paths.keys()).intersection(
+        set(graph_B.paths.keys()))
+    print(f"PATH INTERSECTION: {intersect}")
     editions: list[tuple[set, set]] = futures_collector(
         func=edit_single_path_graph_level,
         argslist=[
@@ -309,11 +318,7 @@ def graph_level_edition_multiprocessing(graph_A: Graph, graph_B: Graph) -> set:
                 path_name,
                 graph_A,
                 graph_B
-            ) for path_name in set(
-                graph_A.paths.keys()
-            ).intersection(
-                set(graph_B.paths.keys())
-            )
+            ) for path_name in intersect
         ]
     )
 
@@ -441,6 +446,8 @@ def path_level_edition_multiprocessing(graph_A: Graph, graph_B: Graph, selected_
 
     paths_of_graph: list[str] = list(selected_paths)
     # Iterating on each pair of paths
+    print(f"PATH SELECTION: {paths_of_graph}")
+
     editions: list[dict] = futures_collector(
         func=edit_single_path_path_level,
         argslist=[
