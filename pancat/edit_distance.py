@@ -13,7 +13,8 @@ def perform_edition(
         output_path: str,
         graph_level: bool,
         selection: list[str] | bool = True,
-        cores: int = 1
+        cores: int = 1,
+        end_pattern: str = "",
 ) -> tuple:
     """
     In this function, we do calculate the distance between G1 and G2, by trying to modify G2 into G1.
@@ -34,11 +35,19 @@ def perform_edition(
     """
     logs_config(verbose=True)
     graph_A: Graph = Graph(
-        gfa_file=gfa_A, with_sequence=False, low_memory=True)
+        gfa_file=gfa_A,
+        with_sequence=False,
+        low_memory=True,
+        end_pattern_exclusion=end_pattern
+    )
     info(f"Loaded graph {gfa_A} in memory")
     print('Paths of Graph_A', ', '.join(graph_A.paths.keys()))
     graph_B: Graph = Graph(
-        gfa_file=gfa_B, with_sequence=False, low_memory=True)
+        gfa_file=gfa_B,
+        with_sequence=False,
+        low_memory=True,
+        end_pattern_exclusion=end_pattern
+    )
     info(f"Loaded graph {gfa_B} in memory")
     print('Paths of Graph_B', ', '.join(graph_B.paths.keys()))
 

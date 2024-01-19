@@ -142,6 +142,8 @@ parser_edit.add_argument(
 parser_edit.add_argument(
     "-o", "--output_path", required=True, type=str, help="Path to a .json output for results.")
 parser_edit.add_argument(
+    "-p", "--pattern", type=str, help="End pattern to exclude if present in path/walks names.")
+parser_edit.add_argument(
     "-g", "--graph_level", help="Asks to perform edition computation at graph level.", action='store_true', default=False)
 parser_edit.add_argument(
     "-c", "--cores", help="Number of cores for computing edition", type=int, default=1)
@@ -288,7 +290,8 @@ def main() -> None:
             output_path=args.output_path,
             graph_level=args.graph_level,
             selection=args.selection,
-            cores=args.cores
+            cores=args.cores,
+            end_pattern=args.pattern,
         )
 
     ##############################################################################
