@@ -16,7 +16,7 @@ def perform_edition(
         graph_level: bool,
         selection: list[str] | bool = True,
         cores: int = 1,
-        end_pattern: str = "",
+        regular_expression: str = ".*",
         trace_memory: bool = False,
 ) -> tuple:
     """
@@ -43,7 +43,7 @@ def perform_edition(
         gfa_file=gfa_A,
         with_sequence=False,
         low_memory=True,
-        end_pattern_exclusion=end_pattern
+        regexp=regular_expression
     )
     info(f"Loaded graph {gfa_A} in memory")
     print('Paths of Graph_A', ', '.join(graph_A.paths.keys()))
@@ -51,7 +51,7 @@ def perform_edition(
         gfa_file=gfa_B,
         with_sequence=False,
         low_memory=True,
-        end_pattern_exclusion=end_pattern
+        regexp=regular_expression
     )
     info(f"Loaded graph {gfa_B} in memory")
     print('Paths of Graph_B', ', '.join(graph_B.paths.keys()))
