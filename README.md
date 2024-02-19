@@ -139,7 +139,7 @@ In order to compare two graphs, they need to :
 If those criteria are met, you may compare your graphs.
 
 ```bash
-pancat edit [-h] -o OUTPUT_PATH [-g] [--selection [SELECTION ...]] graph_A graph_B
+pancat edit [-h] -o OUTPUT_PATH [-p PATTERN] [-g] [-c CORES] [-s [SELECTION ...]] [-t] graph_A graph_B
 
 positional arguments:
   graph_A               Path to a GFA-like file.
@@ -149,7 +149,14 @@ options:
   -h, --help            show this help message and exit
   -o OUTPUT_PATH, --output_path OUTPUT_PATH
                         Path to a .json output for results.
+  -p PATTERN, --pattern PATTERN
+                        Regexp to filter if present in path/walks names.
   -g, --graph_level     Asks to perform edition computation at graph level.
-  --selection [SELECTION ...]
-                        Name(s) for the paths you want to reconstruct.
+  -c CORES, --cores CORES
+                        Number of cores for computing edition
+  -s [SELECTION ...], --selection [SELECTION ...]
+                        Names of the paths you want to compute edition on.
+  -t, --trace_memory    Print to log file memory usage of data structures.
 ```
+
+It also now supports regexp to easily match paths that are differing, as for instance in HPRC files where `pancat edit $CACTUS $PGGB --output_path $WD"hprc_21_edition.json" --graph_level --cores 16 --pattern "^(.+?)#" --trace_memory` can be used to compare individual chromosoms.

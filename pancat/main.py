@@ -14,6 +14,7 @@ from pancat.grapher import compute_stats, display_graph
 from pancat.reconstruct_sequences import reconstruct_paths, graph_against_fasta
 # TODO Testing
 from pancat.edit_distance import perform_edition
+from pancat.compress_graph import compress_graph
 # TODO Rebuilding
 from pancat.find_bubbles import linearize_bubbles
 from pancat.cyclotron import get_graph_cycles
@@ -142,7 +143,7 @@ parser_edit.add_argument(
 parser_edit.add_argument(
     "-o", "--output_path", required=True, type=str, help="Path to a .json output for results.")
 parser_edit.add_argument(
-    "-p", "--pattern", type=str, help="End pattern to exclude if present in path/walks names.")
+    "-p", "--pattern", type=str, help="Regexp to filer on for path names. Dealults to no filtering.")
 parser_edit.add_argument(
     "-g", "--graph_level", help="Asks to perform edition computation at graph level.", action='store_true', default=False)
 parser_edit.add_argument(
@@ -151,6 +152,20 @@ parser_edit.add_argument(
     "-s", "--selection", type=str, help="Name(s) for the paths you want to compute edition on.", nargs='*', default=True)
 parser_edit.add_argument(
     "-t", "--trace_memory", help="Print to log file memory usage of data structures.", action='store_true', default=False)
+
+
+## Subparser for compress_graph ##
+
+parser_compress: ArgumentParser = subparsers.add_parser(
+    'compress', help="Does a compression of the graph, merging simple non-conflicting bubbles .")
+
+parser_compress.add_argument(
+    "input_file", type=str, help="Path to a GFA-like file.")
+parser_compress.add_argument(
+    "-o", "--output_file", required=True, type=str, help="Path to a .gfa output for results.")
+parser_compress.add_argument(
+    "-m", "--minimize", help="Saves the graph with a minimal set of informations (for compatibiliy purposes)", action='store_true', default=False)
+
 
 ## Subparser for unfold ##
 
@@ -270,6 +285,13 @@ def main() -> None:
     #                        REQUIRES IN-DEPTH TESING                            #
     ##############################################################################
 
+    elif args.subcommands == 'compress':
+        compress_graph(
+            args.input_file,
+            args.output_file,
+            minimized=args.minimize
+        )
+
     elif args.subcommands == 'unfold':
         graph_to_unfold: pgGraph = pgGraph(
             gfa_file=args.graph,
@@ -293,7 +315,7 @@ def main() -> None:
             graph_level=args.graph_level,
             selection=args.selection,
             cores=args.cores,
-            end_pattern=args.pattern,
+            regular_expression=args.pattern,
             trace_memory=args.trace_memory,
         )
 
