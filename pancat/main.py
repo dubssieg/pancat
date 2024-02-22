@@ -158,14 +158,14 @@ parser_edit.add_argument(
 
 parser_compress: ArgumentParser = subparsers.add_parser(
     'compress', help="Does a compression of the graph, merging simple non-conflicting bubbles .")
-
 parser_compress.add_argument(
     "input_file", type=str, help="Path to a GFA-like file.")
 parser_compress.add_argument(
     "-o", "--output_file", required=True, type=str, help="Path to a .gfa output for results.")
 parser_compress.add_argument(
     "-m", "--minimize", help="Saves the graph with a minimal set of informations (for compatibiliy purposes)", action='store_true', default=False)
-
+parser_compress.add_argument(
+    "-l", "--length", help="Maximum length of substitutions to compress", type=int, default=float('inf'))
 
 ## Subparser for unfold ##
 
@@ -289,7 +289,8 @@ def main() -> None:
         compress_graph(
             args.input_file,
             args.output_file,
-            minimized=args.minimize
+            minimized=args.minimize,
+            max_len_to_collapse=args.length,
         )
 
     elif args.subcommands == 'unfold':

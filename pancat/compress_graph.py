@@ -73,59 +73,78 @@ def get_substitutor(graph: Graph, successors_set: set, base_orientation: str, or
     Returns:
         str: the substitutor string
     """
-    x = set([graph.segments[successor]['seq'] if orientation_view[successor] == base_orientation else revcomp(
-        graph.segments[successor]['seq']) for successor in successors_set])
-    if x == {'G', 'A'}:
-        substitutor: str = 'R'
-    elif x == {'C', 'T'}:
-        substitutor: str = 'Y'
-    elif x == {'G', 'T'}:
-        substitutor: str = 'K'
-    elif x == {'C', 'A'}:
-        substitutor: str = 'M'
-    elif x == {'G', 'C'}:
-        substitutor: str = 'S'
-    elif x == {'T', 'A'}:
-        substitutor: str = 'W'
-    elif x == {'G', 'T', 'C'}:
-        substitutor: str = 'B'
-    elif x == {'G', 'T', 'A'}:
-        substitutor: str = 'D'
-    elif x == {'A', 'T', 'C'}:
-        substitutor: str = 'H'
-    elif x == {'G', 'A', 'C'}:
-        substitutor: str = 'V'
-    elif x == {'A', 'T', 'C', 'G'}:
-        substitutor: str = 'N'
-    else:
-        try:
-            (substitutor,) = x
-        except ValueError:
-            print(f"Error at x={x}.")
+    node_strs: list[str] = list(
+        set(
+            [
+                graph.segments[successor]['seq'] if orientation_view[successor] ==
+                base_orientation else revcomp(graph.segments[successor]['seq']) for successor in successors_set
+            ]
+        )
+    )
+    substitutor: str = ''
+    for i in range(len(node_strs[0])):
+        x: set[str] = set([strs[i] for strs in node_strs])
+        if x == {'G', 'A'}:
+            substitutor += 'R'
+        elif x == {'C', 'T'}:
+            substitutor += 'Y'
+        elif x == {'G', 'T'}:
+            substitutor += 'K'
+        elif x == {'C', 'A'}:
+            substitutor += 'M'
+        elif x == {'G', 'C'}:
+            substitutor += 'S'
+        elif x == {'T', 'A'}:
+            substitutor += 'W'
+        elif x == {'G', 'T', 'C'}:
+            substitutor += 'B'
+        elif x == {'G', 'T', 'A'}:
+            substitutor += 'D'
+        elif x == {'A', 'T', 'C'}:
+            substitutor += 'H'
+        elif x == {'G', 'A', 'C'}:
+            substitutor += 'V'
+        elif x == {'A', 'T', 'C', 'G'}:
+            substitutor += 'N'
+        else:
+            try:
+                (a,) = x
+                substitutor += a
+            except ValueError:
+                print(f"Error at x={x}.")
     return substitutor
 
 
-def get_removable_bubbles(graph: Graph, orientation_view: dict) -> list[tuple[str, set[str], str]]:
+def get_removable_bubbles(graph: Graph, orientation_view: dict, max_len_to_collapse: int) -> list[tuple[str, set[str], str]]:
     """Returns the list of bubbles that can be removed (that are 1-sized substitution bubbles)
 
     Args:
         graph (Graph): a loaded gfa graph
         orientation_view (dict): a mapping between nodes and absolute reading direction (+/-/?)
 
+        /!\
+            Notion of predecessors/successors might need to be refined as we only take into account one reading direction with this method.
+            As of now it is not a problem as we only have + orientations and ? orientaions, because mixed can't be resolved the same way
+            We will also have to take into account a better way to represent edges' orientation within such bubbles.
+            Some edges are missing in some graphs (orientations showing in graph paths but not in edges)
+
     Returns:
         list[tuple[str,set[str],str]]: a list of tuples, each tuple is a bubble, and each tuple contains source, sink and nodes inside
+
     """
     return [
         (
             source,
             node_data['successors'],
             list(sink)[0]
-        ) for source, node_data in graph.segments.items() if all(
-            [
-                graph.segments[successor]['length'] ==
-                1 for successor in node_data['successors']
-            ]
-        )
+        ) for source, node_data in graph.segments.items() if len(
+            set(
+                [
+                    graph.segments[successor]['length'] for successor in node_data['successors']
+                ]
+            )
+        ) == 1
+        and all([graph.segments[successor]['length'] <= max_len_to_collapse for successor in node_data['successors']])
         and len(node_data['successors']) > 1
         and len(
             (sink := set().union(*[
@@ -177,13 +196,13 @@ def get_orientation_view(graph: Graph) -> dict:
 
     for path_data in graph.paths.values():
         for node, orientation in path_data['path']:
-            orientation_view[node] = orientation.value if graph.segments.get(
-                'orientation_view', orientation.value) == orientation.value else '?'
+            orientation_view[node] = orientation.value if orientation_view.get(
+                node, orientation.value) == orientation.value else '?'
 
     return orientation_view
 
 
-def compress_graph(gfa_file: str, gfa_output: str, minimized: bool = False) -> None:
+def compress_graph(gfa_file: str, gfa_output: str, minimized: bool = False, max_len_to_collapse: int = float('inf')) -> None:
     """Main call for graph compression
 
     Args:
@@ -202,7 +221,8 @@ def compress_graph(gfa_file: str, gfa_output: str, minimized: bool = False) -> N
     removable_nodes: list[tuple[str, set[str], str]] = sorted(
         get_removable_bubbles(
             graph=graph,
-            orientation_view=orientation_view
+            orientation_view=orientation_view,
+            max_len_to_collapse=max_len_to_collapse,
         ),
         key=lambda x: int(x[0])
     )

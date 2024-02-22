@@ -29,6 +29,11 @@ pip install -r requirements.txt --upgrade
 python -m pip install . --quiet
 ```
 
+## Troubleshooting
+
+> [!WARNING]\
+> This tool is under heavy devlopment, and so it's [associated library](https://github.com/Tharos-ux/gfagraphs). I advise to update `pip install gfagraphs --upgrade` every now and then, when you update the tool. Any issue to this project is more than welcome, as I could not test all usecases! Feel free to [open one here](https://github.com/Tharos-ux/pancat/issues) if any problems occurs.
+
 ## Quick start : provided commands
 
 This program is a collection of tools. Not every function or script is accessible through the front-end `pancat`, but this front-end showcase what the tools can do.
