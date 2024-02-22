@@ -115,7 +115,7 @@ def get_substitutor(graph: Graph, successors_set: set, base_orientation: str, or
     return substitutor
 
 
-def get_removable_bubbles(graph: Graph, orientation_view: dict) -> list[tuple[str, set[str], str]]:
+def get_removable_bubbles(graph: Graph, orientation_view: dict, max_len_to_collapse: int) -> list[tuple[str, set[str], str]]:
     """Returns the list of bubbles that can be removed (that are 1-sized substitution bubbles)
 
     Args:
@@ -144,6 +144,7 @@ def get_removable_bubbles(graph: Graph, orientation_view: dict) -> list[tuple[st
                 ]
             )
         ) == 1
+        and all([graph.segments[successor]['length'] <= max_len_to_collapse for successor in node_data['successors']])
         and len(node_data['successors']) > 1
         and len(
             (sink := set().union(*[
@@ -201,7 +202,7 @@ def get_orientation_view(graph: Graph) -> dict:
     return orientation_view
 
 
-def compress_graph(gfa_file: str, gfa_output: str, minimized: bool = False) -> None:
+def compress_graph(gfa_file: str, gfa_output: str, minimized: bool = False, max_len_to_collapse: int = float('inf')) -> None:
     """Main call for graph compression
 
     Args:
@@ -220,7 +221,8 @@ def compress_graph(gfa_file: str, gfa_output: str, minimized: bool = False) -> N
     removable_nodes: list[tuple[str, set[str], str]] = sorted(
         get_removable_bubbles(
             graph=graph,
-            orientation_view=orientation_view
+            orientation_view=orientation_view,
+            max_len_to_collapse=max_len_to_collapse,
         ),
         key=lambda x: int(x[0])
     )
