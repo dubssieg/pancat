@@ -122,8 +122,15 @@ def get_removable_bubbles(graph: Graph, orientation_view: dict) -> list[tuple[st
         graph (Graph): a loaded gfa graph
         orientation_view (dict): a mapping between nodes and absolute reading direction (+/-/?)
 
+        /!\
+            Notion of predecessors/successors might need to be refined as we only take into account one reading direction with this method.
+            As of now it is not a problem as we only have + orientations and ? orientaions, because mixed can't be resolved the same way
+            We will also have to take into account a better way to represent edges' orientation within such bubbles.
+            Some edges are missing in some graphs (orientations showing in graph paths but not in edges)
+
     Returns:
         list[tuple[str,set[str],str]]: a list of tuples, each tuple is a bubble, and each tuple contains source, sink and nodes inside
+
     """
     return [
         (
