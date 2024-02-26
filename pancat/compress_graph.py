@@ -160,11 +160,11 @@ def get_removable_bubbles(graph: Graph, orientation_view: dict, max_len_to_colla
                 ]
             )
         ) == 1
-        and not orientation_view[source] == '?'
-        and not orientation_view[list(sink)[0]] == '?'
-        and not any(
+        and orientation_view.get(source, '?') != '?'
+        and orientation_view.get(list(sink)[0], '?') != '?'
+        and all(
             [
-                orientation_view[successor] ==
+                orientation_view.get(successor, '?') !=
                 '?' for successor in node_data['successors']
             ]
         )
@@ -206,9 +206,9 @@ def compress_graph(gfa_file: str, gfa_output: str, minimized: bool = False, max_
     """Main call for graph compression
 
     Args:
-        gfa_file (str): _description_
-        gfa_output (str): _description_
-        minimized (bool, optional): _description_. Defaults to False.
+        gfa_file (str): a gfa standard formatted file
+        gfa_output (str): a container for the output, in gfa format
+        minimized (bool, optional): if the graph should contain the minimum number of informations to be a gfa file. Defaults to False.
     """
     removed: dict[str, tuple] = dict()
     print(f"Loading file {gfa_file}")
