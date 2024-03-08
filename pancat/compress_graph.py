@@ -187,10 +187,10 @@ def get_orientation_view(graph: Graph) -> dict:
     ? means a bit of both
 
     Args:
-        graph (Graph): _description_
+        graph (Graph): a gfagraphs object
 
     Returns:
-        dict: _description_
+        dict: a descriptor for nodes orientation for nodes that are in paths
     """
     orientation_view: dict[str, str] = dict()
 
@@ -336,6 +336,12 @@ def compress_graph(gfa_file: str, gfa_output: str, minimized: bool = False, max_
     # Validate all edges are according to paths
     for path_data in graph.paths.values():
         for (xi, yi), (xj, yj) in pairwise(path_data['path']):
+            graph.add_edge(
+                source=xi,
+                ori_source=yi,
+                sink=xj,
+                ori_sink=yj,
+            )
             if (xi, xj) not in graph.lines:
                 added_edges_count += 1
                 graph.lines[(xi, xj)] = {

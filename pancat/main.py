@@ -4,13 +4,11 @@ from sys import argv
 from json import dump
 from pathlib import Path
 from rich import print
-from networkx import MultiDiGraph
-from pgGraphs import Graph as pgGraph, GFANetwork
+from pgGraphs import Graph as pgGraph
 from tharospytools.path_tools import path_allocator
-from tharospytools.list_tools import grouper
 # TODO Done
 from pancat.offset_in_gfa import add_offsets_to_gfa
-from pancat.grapher import compute_stats, display_graph
+from pancat.grapher import graph_stats, graph_viewer, multigraph_viewer
 from pancat.reconstruct_sequences import reconstruct_paths, graph_against_fasta
 # TODO Testing
 from pancat.edit_distance import perform_edition
@@ -83,6 +81,24 @@ parser_grapher.add_argument("file", type=str, help="Path to a gfa-like file")
 parser_grapher.add_argument("output", type=str,
                             help="Output path for the html graph file.")
 parser_grapher.add_argument(
+    "-b", "--boundaries", type=int, help="One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp and one for nodes in range 2001-inf bp).", nargs='+', default=[50])
+
+
+## Subparser for multigrapher ##
+
+parser_multigrapher: ArgumentParser = subparsers.add_parser(
+    'multigrapher', help="Creates a html view of the alignment of two graphs.\n"
+    "Huge graphs may take long time to display, or might be messy. Advice would be to extract parts you want to display (with pangraphs isolate or pangraphs neighborhood for instance), then computes the vizualisation on the selected part.")
+
+parser_multigrapher.add_argument(
+    "file_A", type=str, help="Path to a first gfa-like file")
+parser_multigrapher.add_argument(
+    "file_B", type=str, help="Path to a second gfa-like file")
+parser_multigrapher.add_argument(
+    "editions", type=str, help="Path to a path-level edition file created with pancat edit")
+parser_multigrapher.add_argument("output", type=str,
+                                 help="Output path for the html graph file.")
+parser_multigrapher.add_argument(
     "-b", "--boundaries", type=int, help="One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp and one for nodes in range 2001-inf bp).", nargs='+', default=[50])
 
 ## Subparser for stats ##
@@ -213,54 +229,28 @@ def main() -> None:
 
     elif args.subcommands == 'grapher':
         "This command aims to render a graph as a PyVis network displayed in html file"
-        bounds = grouper(
-            [0] + [bound+x for bound in args.boundaries for x in [0, 1]] + [float('inf')], n=2, m=1
+        graph_viewer(
+            file=args.file,
+            output=args.output,
+            boundaies=args.boundaries
         )
 
-        # Creating pgGraphs object
-        gfa_graph: pgGraph = pgGraph(
-            gfa_file=args.file,
-            with_sequence=True
-        )
-
-        # Computing NetworkX structure
-        pangenome_graph: MultiDiGraph = GFANetwork.compute_networkx(
-            graph=gfa_graph,
-            node_prefix=None,
-            node_size_classes=bounds
-        )
-
-        # Computing stats and displaying
-        graph_stats = compute_stats(
-            graph=gfa_graph,
-            length_classes=tuple(bounds)
-        )
-        display_graph(
-            graph=pangenome_graph,
-            colors_paths=gfa_graph.metadata['colors'],
-            annotations=graph_stats,
-            output_path=args.output
+    elif args.subcommands == 'multigrapher':
+        "This command aims to render the alignment of two graphs"
+        multigraph_viewer(
+            file_A=args.file_A,
+            file_B=args.file_B,
+            file_editions=args.editions,
+            boundaries=args.boundaries,
+            output=args.output,
         )
 
     elif args.subcommands == 'stats':
         "This command aims to extract stats from a graph for basic analysis"
-        bounds = grouper(
-            [0] + [bound+x for bound in args.boundaries for x in [0, 1]] + [float('inf')], n=2, m=1
+        graph_stats(
+            file=args.file,
+            boundaries=args.boundaries
         )
-
-        # Creating pgGraphs object
-        gfa_graph: pgGraph = pgGraph(
-            gfa_file=args.file,
-            with_sequence=True
-        )
-
-        # Computing stats and displaying
-        graph_stats = compute_stats(
-            graph=gfa_graph,
-            length_classes=tuple(bounds)
-        )
-        for key, value in graph_stats.items():
-            print(f"{key}: {value}")
 
     elif args.subcommands == 'reconstruct':
         "This command reconstruct sequences from the graph"

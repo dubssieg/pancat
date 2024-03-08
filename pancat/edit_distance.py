@@ -120,8 +120,8 @@ def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str])
         i: int = 0  # counter of segmentations on graph_A
         j: int = 0  # counter of segmentations on graph_B
 
-        merges: set[int] = set()  # set for merges
-        splits: set[int] = set()  # set for merges
+        merges: set[tuple[int, tuple[str]]] = set()  # set for merges
+        splits: set[tuple[int, tuple[str]]] = set()  # set for merges
 
         pos_A: int = 0  # Absolute position in BP on A
         pos_B: int = 0  # Absolute position in BP on B
@@ -158,12 +158,26 @@ def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str])
                     j += 1
                 case (True, False):
                     # Iterating on top, split required
-                    splits.add(global_pos)
+                    splits.add(
+                        (
+                            global_pos,
+                            (
+                                current_node_A,
+                            )
+                        )
+                    )
                     pos_A += graph_A.segments[current_node_A]['length']
                     i += 1
                 case (False, True):
                     # Iterating on bottom, merge required
-                    merges.add(global_pos)
+                    merges.add(
+                        (
+                            global_pos,
+                            (
+                                current_node_A,
+                            )
+                        )
+                    )
                     pos_B += graph_B.segments[current_node_B]['length']
                     j += 1
                 case (False, False):
@@ -195,8 +209,10 @@ def graph_level_edition(graph_A: Graph, graph_B: Graph) -> set:
 
     edition_results: dict[list] = dict()
 
-    merges: set[frozenset[tuple[str, frozenset]]] = set()  # set for merges
-    splits: set[frozenset[tuple[str, frozenset]]] = set()  # set for splits
+    merges: set[frozenset[tuple[str, frozenset, tuple[str]]]
+                ] = set()  # set for merges
+    splits: set[frozenset[tuple[str, frozenset, tuple[str]]]
+                ] = set()  # set for splits
 
     intersect: set = set(graph_A.paths.keys()).intersection(
         set(graph_B.paths.keys()))
@@ -245,12 +261,17 @@ def graph_level_edition(graph_A: Graph, graph_B: Graph) -> set:
                     splits.add(
                         frozenset(
                             (
-                                path_name,
-                                frozenset(
-                                    x+global_pos-pos_A for x, _, _ in list_of_positions
+                                (
+                                    path_name,
+                                    frozenset(
+                                        x+global_pos-pos_A for x, _, _ in list_of_positions
+                                    ),
+                                    (
+                                        current_node_A,
+                                    )
                                 )
+                                for path_name, list_of_positions in graph_B.segments[current_node_B]['PO'].items()
                             )
-                            for path_name, list_of_positions in graph_B.segments[current_node_B]['PO'].items()
                         )
                     )
                     pos_A += graph_A.segments[current_node_A]['length']
@@ -260,12 +281,17 @@ def graph_level_edition(graph_A: Graph, graph_B: Graph) -> set:
                     merges.add(
                         frozenset(
                             (
-                                path_name,
-                                frozenset(
-                                    x for _, x, _ in list_of_positions
+                                (
+                                    path_name,
+                                    frozenset(
+                                        x for _, x, _ in list_of_positions
+                                    ),
+                                    (
+                                        current_node_A,
+                                    )
                                 )
-                            )
-                            for path_name, list_of_positions in graph_B.segments[current_node_B]['PO'].items()
+                                for path_name, list_of_positions in graph_B.segments[current_node_B]['PO'].items()
+                            ),
                         )
                     )
                     pos_B += graph_B.segments[current_node_B]['length']
@@ -275,12 +301,12 @@ def graph_level_edition(graph_A: Graph, graph_B: Graph) -> set:
 
     edition_results['merges'] = [
         [
-            (path_name, [x for x in pos]) for path_name, pos in ext_fset
+            (path_name, [x for x in pos], nodes) for path_name, pos, nodes in ext_fset
         ] for ext_fset in merges
     ]
     edition_results['splits'] = [
         [
-            (path_name, [x for x in pos]) for path_name, pos in ext_fset
+            (path_name, [x for x in pos], nodes) for path_name, pos, nodes in ext_fset
         ] for ext_fset in splits
     ]
 
@@ -305,8 +331,10 @@ def graph_level_edition_multiprocessing(graph_A: Graph, graph_B: Graph) -> set:
 
     edition_results: dict[list] = dict()
 
-    merges: set[frozenset[tuple[str, frozenset]]] = set()  # set for merges
-    splits: set[frozenset[tuple[str, frozenset]]] = set()  # set for splits
+    merges: set[frozenset[tuple[str, frozenset, tuple[str]]]
+                ] = set()  # set for merges
+    splits: set[frozenset[tuple[str, frozenset, tuple[str]]]
+                ] = set()  # set for splits
 
     intersect: set = set(graph_A.paths.keys()).intersection(
         set(graph_B.paths.keys()))
@@ -328,12 +356,12 @@ def graph_level_edition_multiprocessing(graph_A: Graph, graph_B: Graph) -> set:
 
     edition_results['merges'] = [
         [
-            (path_name, [x for x in pos]) for path_name, pos in ext_fset
+            (path_name, [x for x in pos], nodes) for path_name, pos, nodes in ext_fset
         ] for ext_fset in merges
     ]
     edition_results['splits'] = [
         [
-            (path_name, [x for x in pos]) for path_name, pos in ext_fset
+            (path_name, [x for x in pos], nodes) for path_name, pos, nodes in ext_fset
         ] for ext_fset in splits
     ]
 
@@ -356,8 +384,10 @@ def edit_single_path_graph_level(path_name: str, graph_A: Graph, graph_B: Graph)
     """
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Working on {path_name}")
 
-    merges: set[frozenset[tuple[str, frozenset]]] = set()  # set for merges
-    splits: set[frozenset[tuple[str, frozenset]]] = set()  # set for splits
+    merges: set[frozenset[tuple[str, frozenset, tuple[str]]]
+                ] = set()  # set for merges
+    splits: set[frozenset[tuple[str, frozenset, tuple[str]]]
+                ] = set()  # set for splits
 
     i: int = 0  # counter of segmentations on graph_A
     j: int = 0  # counter of segmentations on graph_B
@@ -400,12 +430,17 @@ def edit_single_path_graph_level(path_name: str, graph_A: Graph, graph_B: Graph)
                 splits.add(
                     frozenset(
                         (
-                            path_name,
-                            frozenset(
-                                x+global_pos-pos_A for x, _, _ in list_of_positions
+                            (
+                                path_name,
+                                frozenset(
+                                    x+global_pos-pos_A for x, _, _ in list_of_positions
+                                ),
+                                (
+                                    current_node_A,
+                                )
                             )
+                            for path_name, list_of_positions in graph_B.segments[current_node_B]['PO'].items()
                         )
-                        for path_name, list_of_positions in graph_B.segments[current_node_B]['PO'].items()
                     )
                 )
                 pos_A += graph_A.segments[current_node_A]['length']
@@ -413,14 +448,19 @@ def edit_single_path_graph_level(path_name: str, graph_A: Graph, graph_B: Graph)
             case (False, True):
                 # Iterating on bottom, merge required
                 merges.add(
-                    frozenset(
-                        (
-                            path_name,
-                            frozenset(
-                                x for _, x, _ in list_of_positions
+                    (
+                        frozenset(
+                            (
+                                path_name,
+                                frozenset(
+                                    x for _, x, _ in list_of_positions
+                                ),
+                                (
+                                    current_node_A,
+                                )
                             )
+                            for path_name, list_of_positions in graph_B.segments[current_node_B]['PO'].items()
                         )
-                        for path_name, list_of_positions in graph_B.segments[current_node_B]['PO'].items()
                     )
                 )
                 pos_B += graph_B.segments[current_node_B]['length']
@@ -479,8 +519,8 @@ def edit_single_path_path_level(path_name: str, graph_A: Graph, graph_B: Graph) 
     i: int = 0  # counter of segmentations on graph_A
     j: int = 0  # counter of segmentations on graph_B
 
-    merges: set[int] = set()  # set for merges
-    splits: set[int] = set()  # set for merges
+    merges: set[tuple[int, tuple[str]]] = set()  # set for merges
+    splits: set[tuple[int, tuple[str]]] = set()  # set for merges
 
     pos_A: int = 0  # Absolute position in BP on A
     pos_B: int = 0  # Absolute position in BP on B
@@ -517,12 +557,17 @@ def edit_single_path_path_level(path_name: str, graph_A: Graph, graph_B: Graph) 
                 j += 1
             case (True, False):
                 # Iterating on top, split required
-                splits.add(global_pos)
+                splits.add((global_pos, (current_node_A,)))
                 pos_A += graph_A.segments[current_node_A]['length']
                 i += 1
             case (False, True):
                 # Iterating on bottom, merge required
-                merges.add(global_pos)
+                merges.add(
+                    (
+                        global_pos,
+                        (current_node_A,)
+                    )
+                )
                 pos_B += graph_B.segments[current_node_B]['length']
                 j += 1
             case (False, False):
