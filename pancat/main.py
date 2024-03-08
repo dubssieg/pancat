@@ -4,13 +4,11 @@ from sys import argv
 from json import dump
 from pathlib import Path
 from rich import print
-from networkx import MultiDiGraph
-from pgGraphs import Graph as pgGraph, GFANetwork
+from pgGraphs import Graph as pgGraph
 from tharospytools.path_tools import path_allocator
-from tharospytools.list_tools import grouper
 # TODO Done
 from pancat.offset_in_gfa import add_offsets_to_gfa
-from pancat.grapher import compute_stats, display_graph
+from pancat.grapher import graph_stats, graph_viewer
 from pancat.reconstruct_sequences import reconstruct_paths, graph_against_fasta
 # TODO Testing
 from pancat.edit_distance import perform_edition
@@ -213,54 +211,18 @@ def main() -> None:
 
     elif args.subcommands == 'grapher':
         "This command aims to render a graph as a PyVis network displayed in html file"
-        bounds = grouper(
-            [0] + [bound+x for bound in args.boundaries for x in [0, 1]] + [float('inf')], n=2, m=1
-        )
-
-        # Creating pgGraphs object
-        gfa_graph: pgGraph = pgGraph(
-            gfa_file=args.file,
-            with_sequence=True
-        )
-
-        # Computing NetworkX structure
-        pangenome_graph: MultiDiGraph = GFANetwork.compute_networkx(
-            graph=gfa_graph,
-            node_prefix=None,
-            node_size_classes=bounds
-        )
-
-        # Computing stats and displaying
-        graph_stats = compute_stats(
-            graph=gfa_graph,
-            length_classes=tuple(bounds)
-        )
-        display_graph(
-            graph=pangenome_graph,
-            colors_paths=gfa_graph.metadata['colors'],
-            annotations=graph_stats,
-            output_path=args.output
+        graph_viewer(
+            file=args.file,
+            output=args.output,
+            boundaies=args.boundaries
         )
 
     elif args.subcommands == 'stats':
         "This command aims to extract stats from a graph for basic analysis"
-        bounds = grouper(
-            [0] + [bound+x for bound in args.boundaries for x in [0, 1]] + [float('inf')], n=2, m=1
+        graph_stats(
+            file=args.file,
+            boundaries=args.boundaries
         )
-
-        # Creating pgGraphs object
-        gfa_graph: pgGraph = pgGraph(
-            gfa_file=args.file,
-            with_sequence=True
-        )
-
-        # Computing stats and displaying
-        graph_stats = compute_stats(
-            graph=gfa_graph,
-            length_classes=tuple(bounds)
-        )
-        for key, value in graph_stats.items():
-            print(f"{key}: {value}")
 
     elif args.subcommands == 'reconstruct':
         "This command reconstruct sequences from the graph"
