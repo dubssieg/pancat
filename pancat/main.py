@@ -8,7 +8,7 @@ from pgGraphs import Graph as pgGraph
 from tharospytools.path_tools import path_allocator
 # TODO Done
 from pancat.offset_in_gfa import add_offsets_to_gfa
-from pancat.grapher import graph_stats, graph_viewer
+from pancat.grapher import graph_stats, graph_viewer, multigraph_viewer
 from pancat.reconstruct_sequences import reconstruct_paths, graph_against_fasta
 # TODO Testing
 from pancat.edit_distance import perform_edition
@@ -81,6 +81,24 @@ parser_grapher.add_argument("file", type=str, help="Path to a gfa-like file")
 parser_grapher.add_argument("output", type=str,
                             help="Output path for the html graph file.")
 parser_grapher.add_argument(
+    "-b", "--boundaries", type=int, help="One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp and one for nodes in range 2001-inf bp).", nargs='+', default=[50])
+
+
+## Subparser for multigrapher ##
+
+parser_multigrapher: ArgumentParser = subparsers.add_parser(
+    'multigrapher', help="Creates a html view of the alignment of two graphs.\n"
+    "Huge graphs may take long time to display, or might be messy. Advice would be to extract parts you want to display (with pangraphs isolate or pangraphs neighborhood for instance), then computes the vizualisation on the selected part.")
+
+parser_multigrapher.add_argument(
+    "file_A", type=str, help="Path to a first gfa-like file")
+parser_multigrapher.add_argument(
+    "file_B", type=str, help="Path to a second gfa-like file")
+parser_multigrapher.add_argument(
+    "editions", type=str, help="Path to a path-level edition file created with pancat edit")
+parser_multigrapher.add_argument("output", type=str,
+                                 help="Output path for the html graph file.")
+parser_multigrapher.add_argument(
     "-b", "--boundaries", type=int, help="One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp and one for nodes in range 2001-inf bp).", nargs='+', default=[50])
 
 ## Subparser for stats ##
@@ -215,6 +233,16 @@ def main() -> None:
             file=args.file,
             output=args.output,
             boundaies=args.boundaries
+        )
+
+    elif args.subcommands == 'multigrapher':
+        "This command aims to render the alignment of two graphs"
+        multigraph_viewer(
+            file_A=args.file_A,
+            file_B=args.file_B,
+            file_editions=args.editions,
+            boundaries=args.boundaries,
+            output=args.output,
         )
 
     elif args.subcommands == 'stats':
