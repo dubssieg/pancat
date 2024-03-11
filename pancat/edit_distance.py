@@ -3,12 +3,13 @@ from json import dump
 from pgGraphs import Graph
 from logging import info
 from tharospytools.multithreading import futures_collector
-from tharospytools.logging_tools import logs_config
+from tharospytools.logging_tools import logs_config, timing
 from datetime import datetime
 from os import getpid
 from psutil import Process
 
 
+@timing
 def perform_edition(
         gfa_A: str,
         gfa_B: str,
