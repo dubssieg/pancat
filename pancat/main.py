@@ -2,6 +2,7 @@
 from argparse import ArgumentParser
 from sys import argv
 from json import dump
+from os.path import exists
 from pathlib import Path
 from rich import print
 from pgGraphs import Graph as pgGraph
@@ -185,7 +186,7 @@ parser_edit.add_argument(
 parser_compress: ArgumentParser = subparsers.add_parser(
     'compress', help="Does a compression of the graph, merging simple non-conflicting bubbles .")
 parser_compress.add_argument(
-    "input_file", type=str, help="Path to a GFA-like file.")
+    "file", type=str, help="Path to a GFA-like file.")
 parser_compress.add_argument(
     "-o", "--output_file", required=True, type=str, help="Path to a .gfa output for results.")
 parser_compress.add_argument(
@@ -218,6 +219,12 @@ def main() -> None:
             "Try to use -h or --help to get list of available commands."
         )
         exit()
+
+    for identifier, syspath in [(key, path) for key, path in args.__dict__.items() if key in ['file', 'graph_A', 'graph_B', 'file_A', 'file_B']]:
+        if not exists(syspath):
+            raise RuntimeError(
+                f"Specified path '{syspath}' for argument '{identifier}' does not exists."
+            )
 
     ##############################################################################
     #                     AVAILABLE & WORKING COMMANDS                           #
@@ -283,7 +290,7 @@ def main() -> None:
 
     elif args.subcommands == 'compress':
         compress_graph(
-            args.input_file,
+            args.file,
             args.output_file,
             minimized=args.minimize,
             max_len_to_collapse=args.length,
