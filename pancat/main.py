@@ -13,6 +13,7 @@ from pancat.reconstruct_sequences import reconstruct_paths, graph_against_fasta
 # TODO Testing
 from pancat.edit_distance import perform_edition
 from pancat.compress_graph import compress_graph
+from pancat.correct import correct_graph
 # TODO Rebuilding
 from pancat.find_bubbles import linearize_bubbles
 from pancat.cyclotron import get_graph_cycles
@@ -82,6 +83,15 @@ parser_grapher.add_argument("output", type=str,
                             help="Output path for the html graph file.")
 parser_grapher.add_argument(
     "-b", "--boundaries", type=int, help="One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp and one for nodes in range 2001-inf bp).", nargs='+', default=[50])
+
+
+## Subparser for correct ##
+
+parser_correct: ArgumentParser = subparsers.add_parser(
+    'correct', help="(WIP, experimental) Corrects the graph by adding missing edges.")
+parser_correct.add_argument("file", type=str, help="Path to a gfa-like file")
+parser_correct.add_argument("output", type=str,
+                            help="Output path for the gfa graph file.")
 
 
 ## Subparser for multigrapher ##
@@ -254,26 +264,22 @@ def main() -> None:
 
     elif args.subcommands == 'reconstruct':
         "This command reconstruct sequences from the graph"
-        sequences: dict = reconstruct_paths(
+        reconstruct_paths(
             gfa_file=args.file,
-            selected_paths=args.selection
+            output=args.out,
+            selected_paths=args.selection,
+            split=args.split,
         )
-        if args.split:
-            for i, (label, sequence) in enumerate(sequences.items()):
-                with open(f"{args.out}_{i}.fasta", "w", encoding="utf-8") as writer:
-                    writer.write(
-                        f">{label}\n{''.join(sequence)}\n"
-                    )
-        else:
-            with open(f"{args.out}.fasta", "w", encoding="utf-8") as writer:
-                for label, sequence in sequences.items():
-                    writer.write(
-                        f">{label}\n{''.join(sequence)}\n"
-                    )
 
     ##############################################################################
     #                        REQUIRES IN-DEPTH TESING                            #
     ##############################################################################
+
+    elif args.subcommands == 'correct':
+        correct_graph(
+            args.file,
+            args.output,
+        )
 
     elif args.subcommands == 'compress':
         compress_graph(

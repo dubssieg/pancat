@@ -97,6 +97,7 @@ def multigraph_viewer(
     file_editions: str,
     boundaries: list,
     output: str,
+    start_stop: tuple | bool = False,
 ) -> None:
     """Renders a digraph alignment and explicits their connexions inbetween them.
 
