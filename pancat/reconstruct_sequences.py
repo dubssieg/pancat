@@ -2,10 +2,9 @@
 from Bio import SeqIO
 from tharospytools.bio_tools import revcomp
 from pgGraphs import Graph
-from itertools import count
 
 
-def reconstruct_paths(gfa_file: str, selected_paths: list | None = None) -> dict:
+def reconstruct_paths(gfa_file: str, output: str, selected_paths: list | bool = False, split: bool = True) -> dict:
     """Given a GFA file with paths, follows those paths to reconstruct the linear sequences
 
     Args:
@@ -23,14 +22,15 @@ def reconstruct_paths(gfa_file: str, selected_paths: list | None = None) -> dict
         with_sequence=True
     )
     if len(gfa_graph.paths) > 0:
-        paths_to_reconstruct: dict = {
-            path_name: path_datas for path_name, path_datas in gfa_graph.paths.items() if path_name in selected_paths
-        } if selected_paths else gfa_graph.paths
-        return {path_name: [
-            gfa_graph.segments[x]['seq'] if vect.value == '+' else revcomp(
-                gfa_graph.segments[x]['seq']
-            ) for x, vect in path_datas["path"]
-        ] for path_name, path_datas in paths_to_reconstruct.items()}
+        genomes: dict = gfa_graph.reconstruct_sequences()
+        selected_paths: list = (selected_paths, sorted(list(gfa_graph.paths.keys())))[
+            isinstance(selected_paths, bool)]
+        for i, label in enumerate(selected_paths):
+            with open(f'{output}_{i}.fasta' if split else f'{output}.fasta', 'w' if split else 'a', encoding="utf-8") as writer:
+                writer.write(
+                    f">{label}\n{''.join(genomes[label])}\n"
+                )
+                del genomes[label]
     else:
         raise ValueError(
             "Graph has no embed paths. Could'nt determine what to reconstruct!"

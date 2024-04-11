@@ -164,6 +164,7 @@ def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str])
                             global_pos,
                             (
                                 current_node_A,
+                                current_node_B,
                             )
                         )
                     )
@@ -176,6 +177,7 @@ def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str])
                             global_pos,
                             (
                                 current_node_A,
+                                current_node_B,
                             )
                         )
                     )
@@ -269,6 +271,7 @@ def graph_level_edition(graph_A: Graph, graph_B: Graph) -> set:
                                     ),
                                     (
                                         current_node_A,
+                                        current_node_B,
                                     )
                                 )
                                 for path_name, list_of_positions in graph_B.segments[current_node_B]['PO'].items()
@@ -289,6 +292,7 @@ def graph_level_edition(graph_A: Graph, graph_B: Graph) -> set:
                                     ),
                                     (
                                         current_node_A,
+                                        current_node_B,
                                     )
                                 )
                                 for path_name, list_of_positions in graph_B.segments[current_node_B]['PO'].items()
@@ -383,8 +387,6 @@ def edit_single_path_graph_level(path_name: str, graph_A: Graph, graph_B: Graph)
     Returns:
         tuple[set]: (merges, splits)
     """
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Working on {path_name}")
-
     merges: set[frozenset[tuple[str, frozenset, tuple[str]]]
                 ] = set()  # set for merges
     splits: set[frozenset[tuple[str, frozenset, tuple[str]]]
@@ -438,6 +440,7 @@ def edit_single_path_graph_level(path_name: str, graph_A: Graph, graph_B: Graph)
                                 ),
                                 (
                                     current_node_A,
+                                    current_node_B,
                                 )
                             )
                             for path_name, list_of_positions in graph_B.segments[current_node_B]['PO'].items()
@@ -458,6 +461,7 @@ def edit_single_path_graph_level(path_name: str, graph_A: Graph, graph_B: Graph)
                                 ),
                                 (
                                     current_node_A,
+                                    current_node_B,
                                 )
                             )
                             for path_name, list_of_positions in graph_B.segments[current_node_B]['PO'].items()
@@ -468,7 +472,6 @@ def edit_single_path_graph_level(path_name: str, graph_A: Graph, graph_B: Graph)
                 j += 1
             case (False, False):
                 raise ValueError()
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Edition sucessfully completed for {path_name}")
     return (merges, splits)
 
 
@@ -515,8 +518,6 @@ def edit_single_path_path_level(path_name: str, graph_A: Graph, graph_B: Graph) 
     Returns:
         dict: editions
     """
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Working on {path_name}")
-
     i: int = 0  # counter of segmentations on graph_A
     j: int = 0  # counter of segmentations on graph_B
 
@@ -558,7 +559,15 @@ def edit_single_path_path_level(path_name: str, graph_A: Graph, graph_B: Graph) 
                 j += 1
             case (True, False):
                 # Iterating on top, split required
-                splits.add((global_pos, (current_node_A,)))
+                splits.add(
+                    (
+                        global_pos,
+                        (
+                            current_node_A,
+                            current_node_B,
+                        )
+                    )
+                )
                 pos_A += graph_A.segments[current_node_A]['length']
                 i += 1
             case (False, True):
@@ -566,14 +575,16 @@ def edit_single_path_path_level(path_name: str, graph_A: Graph, graph_B: Graph) 
                 merges.add(
                     (
                         global_pos,
-                        (current_node_A,)
+                        (
+                            current_node_A,
+                            current_node_B,
+                        )
                     )
                 )
                 pos_B += graph_B.segments[current_node_B]['length']
                 j += 1
             case (False, False):
                 raise ValueError()
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Edition sucessfully completed for {path_name}")
     return {
         'merges': sorted(list(merges)),
         'splits': sorted(list(splits))
