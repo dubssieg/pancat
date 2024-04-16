@@ -2,9 +2,10 @@
 from Bio import SeqIO
 from tharospytools.bio_tools import revcomp
 from pgGraphs import Graph
+from os.path import join
 
 
-def reconstruct_paths(gfa_file: str, output: str, selected_paths: list | bool = False, split: bool = True) -> dict:
+def reconstruct_paths(gfa_file: str, folder: str, selected_paths: list | bool = False, split: bool = True) -> dict:
     """Given a GFA file with paths, follows those paths to reconstruct the linear sequences
 
     Args:
@@ -25,8 +26,8 @@ def reconstruct_paths(gfa_file: str, output: str, selected_paths: list | bool = 
         genomes: dict = gfa_graph.reconstruct_sequences()
         selected_paths: list = (selected_paths, sorted(list(gfa_graph.paths.keys())))[
             isinstance(selected_paths, bool)]
-        for i, label in enumerate(selected_paths):
-            with open(f'{output}_{i}.fasta' if split else f'{output}.fasta', 'w' if split else 'a', encoding="utf-8") as writer:
+        for label in selected_paths:
+            with open(join(folder, f'{label}.fasta') if split else join(folder, 'reconstructed.fasta'), 'w' if split else 'a', encoding="utf-8") as writer:
                 writer.write(
                     f">{label}\n{''.join(genomes[label])}\n"
                 )
