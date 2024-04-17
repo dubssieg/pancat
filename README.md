@@ -6,6 +6,9 @@
 
 # PANCAT - PANgenome Comparison and Anlaysis Toolkit
 
+> [!WARNING]\
+> A paper is in preparation about this work. If you consider to use this tool, please contact the author for attribution.
+
 Implementations of many functions for performing various actions on GFA-like graphs in a command-line tool, such as extracting or offseting a pangenome graph.
 Is capable of comparing graphs topology between graphs that happen to contain the same set of sequences. Does pangenome graphs visualisation with interactive html files.
 Uses the [gfagraphs library](https://pypi.org/project/gfagraphs/) to load and manipulate pangenome graphs.
@@ -42,11 +45,15 @@ Other tools are in the `scripts` folder.
 Are available through `pancat`:
 
 - **offset** adds relative position information as a tag in GFA file
+- **correct** (WIP, experimental) corrects the graph by adding missing information back into it.
 - **grapher** creates interactive graph representation from a GFA file
+- **multigrapher** creates interactive graph representation of the differnces between two pangenome graphs
 - **stats** gathers basic stats from the input GFA 
 - **complete** assesses if the graph is a complete pangenome graph (all genomes fully embedded in the graph)
 - **reconstruct** recreates the linear sequences from the graph
 - **edit** computes a edit distance between variation graphs
+- **compress** (WIP, experimental) compresses the graph by collapsing substitution bubbles, losselessly
+- **unfold** (WIP, experimental) break cycles in the graph by adding nodes and edges in it
 
 Were available before (and will be back soon):
 - **isolate** extracts a subgraph from positions in the paths
