@@ -96,7 +96,30 @@ def perform_edition(
                 info(f"Computing edition for graphs on single thread")
                 results = path_level_edition(graph_A, graph_B, path_intersect)
     info(f"Saving results in {output_path}")
-    dump(results, open(output_path, 'w', encoding='utf-8'))
+    if output_path.endswith('.json'):
+        dump(results, open(output_path, 'w', encoding='utf-8'))
+    else:
+        with open(output_path, 'w', encoding='utf-8') as logwriter:
+            logwriter.write(
+                f"# Editions results for {gfa_A} against {gfa_B} performed at {('path level','graph level')[graph_level]}\n"
+            )
+            logwriter.write(
+                f'# Selected paths {(path_intersect,selection)[isinstance(selection, list)]}\n'
+            )
+            if graph_level:
+                for category in ['merges', 'splits']:
+                    logwriter.write(f'## {category}\n')
+                    for edition in results[category]:
+                        logwriter.write(
+                            '\t'.join([str(__) for __ in edition])+'\n')
+            else:
+                for path_name, edit_category in results.items():
+                    logwriter.write(f'## {path_name}\n')
+                    for category in ['merges', 'splits']:
+                        logwriter.write(f'## {category}\n')
+                        for edition in edit_category[category]:
+                            logwriter.write(
+                                '\t'.join([str(__) for __ in edition])+'\n')
     info(f"Job terminated sucessfully!")
 
 
