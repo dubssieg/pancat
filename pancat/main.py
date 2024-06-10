@@ -107,8 +107,9 @@ parser_multigrapher.add_argument(
     "file_B", type=str, help="Path to a second gfa-like file")
 parser_multigrapher.add_argument(
     "editions", type=str, help="Path to a path-level edition file created with pancat edit")
-parser_multigrapher.add_argument("output", type=str,
-                                 help="Output path for the html graph file.")
+parser_multigrapher.add_argument(
+    "output", type=str,
+    help="Output path for the html graph file.")
 parser_multigrapher.add_argument(
     "-b", "--boundaries", type=int, help="One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp and one for nodes in range 2001-inf bp).", nargs='+', default=[50])
 
@@ -143,7 +144,7 @@ parser_reconstruct: ArgumentParser = subparsers.add_parser(
 parser_reconstruct.add_argument(
     "file", type=str, help="Path to a gfa-like file")
 parser_reconstruct.add_argument(
-    "out", type=str, help="Output path (without extension)")
+    "out", type=str, help="Path to a folder that will contain the extracted paths.")
 parser_reconstruct.add_argument(
     "-s", "--split", help="Tells to split in different files", action='store_true')
 parser_reconstruct.add_argument(
@@ -249,7 +250,7 @@ def main() -> None:
         graph_viewer(
             file=args.file,
             output=args.output,
-            boundaies=args.boundaries
+            boundaries=args.boundaries
         )
 
     elif args.subcommands == 'multigrapher':
@@ -273,7 +274,7 @@ def main() -> None:
         "This command reconstruct sequences from the graph"
         reconstruct_paths(
             gfa_file=args.file,
-            output=args.out,
+            folder=args.out,
             selected_paths=args.selection,
             split=args.split,
         )
