@@ -316,14 +316,6 @@ def compress_graph(gfa_file: str, gfa_output: str, minimized: bool = False, max_
     for path_data in graph.paths.values():
         path_data['path'] = [
             (node, ori) for node, ori in path_data['path'] if node in graph.segments]
-    """
-    mark_for_destruction: list[tuple] = list()
-    for doves in graph.lines.keys():
-        if any([dove not in graph.segments or dove in ['source', 'sink'] for dove in doves]):
-            mark_for_destruction.append(doves)
-    for marked in mark_for_destruction:
-        del graph.lines[marked]
-    """
 
     for seg_data in graph.segments.values():
         del seg_data['predecessors']
@@ -332,7 +324,6 @@ def compress_graph(gfa_file: str, gfa_output: str, minimized: bool = False, max_
     # Cleaning edges (radical, but should work in theory)
     graph.lines = {}
 
-    added_edges_count: int = 0
     # Validate all edges are according to paths
     for path_data in graph.paths.values():
         for (xi, yi), (xj, yj) in pairwise(path_data['path']):
@@ -342,14 +333,6 @@ def compress_graph(gfa_file: str, gfa_output: str, minimized: bool = False, max_
                 sink=xj,
                 ori_sink=yj,
             )
-            if (xi, xj) not in graph.lines:
-                added_edges_count += 1
-                graph.lines[(xi, xj)] = {
-                    "start": xi,
-                    "end": xj,
-                    "orientation": f"{yi.value}/{yj.value}"
-                }
-    print(f"Added {added_edges_count} edges to the graph.")
 
     for seg_data in graph.segments.values():
         if seg_data['alternate_paths'] == {}:
