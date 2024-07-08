@@ -15,6 +15,7 @@ from pancat.reconstruct_sequences import reconstruct_paths, graph_against_fasta
 from pancat.edit_distance import perform_edition
 from pancat.compress_graph import compress_graph
 from pancat.correct import correct_graph
+from pancat.isolate_subgraph import extract_subgraph
 # TODO Rebuilding
 from pancat.find_bubbles import linearize_bubbles
 from pancat.cyclotron import get_graph_cycles
@@ -32,8 +33,8 @@ parser._optionals.title = 'Global Arguments'
 
 ## Subparser for isolate_by_range ##
 
-"""
-parser_isolate: ArgumentParser = subparsers.add_parser('isolate',help="Isolates a subgraph within a graph.\n""Relies on position in base pairs, requires the PO tag (built by pangraphs offset). In order to output a correct graph, you should provide a graph that has paths or walks to describe nodes chaining, and your range should be valid (meaning, base positions must be in the graph).")
+parser_isolate: ArgumentParser = subparsers.add_parser(
+    'isolate', help="Isolates a subgraph within a graph.\n""Relies on position in base pairs, requires the PO tag (built by pangraphs offset). In order to output a correct graph, you should provide a graph that has paths or walks to describe nodes chaining, and your range should be valid (meaning, base positions must be in the graph).")
 parser_isolate.add_argument("file", type=str, help="Path to a gfa-like file")
 parser_isolate.add_argument(
     "out", type=str, help="Output path (with extension)")
@@ -55,7 +56,6 @@ parser_isolate.add_argument(
     type=str,
     help='To specifiy the path to follow',
 )
-"""
 
 ## Subparser for offset_in_gfa ##
 
@@ -213,7 +213,6 @@ args = parser.parse_args()
 
 def main() -> None:
     "Main call for subprograms"
-    print("PANCAT initialisation sucessful!")
     if len(argv) == 1:
         print(
             "[dark_orange]You need to provide a command and its arguments for the program to work.\n"
@@ -329,15 +328,13 @@ def main() -> None:
     ##############################################################################
 
     elif args.subcommands == 'isolate':
-        """
-        range_isolate(
-            gfa_file=args.file,
-            output=args.out,
-            start=args.start,
-            stop=args.end,
-            reference_name=args.reference)
-        """
-        raise NotImplementedError()
+        extract_subgraph(
+            gfa_path=args.file,
+            x=args.start,
+            y=args.end,
+            sequence=args.reference,
+            output=args.out
+        )
 
     elif args.subcommands == 'linearize':
         "TODO: better detection of cycles (buggy for now) / already done by GFAffix in part"
