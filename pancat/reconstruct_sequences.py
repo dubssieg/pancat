@@ -48,13 +48,16 @@ def graph_against_fasta(gfa_graph: str, pipeline_txt: str) -> bool:
             with_sequence=True
         )
         if len(gfa_graph.paths) > 0:
-            genomes: dict = gfa_graph.reconstruct_sequences()
+            genomes: dict = {
+                x.lower(): y for x, y in gfa_graph.reconstruct_sequences().items()
+            }
 
         complete_pangenome_graph: list[bool] = [
             False for _ in range(len(lines))]
         for y, line in enumerate(lines):
             # We assume the pipeline file is in the cactus format
-            seq_name, seq_path = line.strip().split('\t')
+            seq_name, seq_path = line.strip().split(
+                '\t')[0].lower(), line.strip().split('\t')[1]
             if seq_name in genomes:
                 # Do comparison
                 # We load the file
