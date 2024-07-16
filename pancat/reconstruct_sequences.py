@@ -3,6 +3,7 @@ from Bio import SeqIO
 from tharospytools.bio_tools import revcomp
 from pgGraphs import Graph
 from os.path import join
+from pathlib import Path
 
 
 def reconstruct_paths(gfa_file: str, folder: str, selected_paths: list | bool = False, split: bool = True) -> dict:
@@ -27,7 +28,7 @@ def reconstruct_paths(gfa_file: str, folder: str, selected_paths: list | bool = 
         selected_paths: list = (selected_paths, sorted(list(gfa_graph.paths.keys())))[
             isinstance(selected_paths, bool)]
         for label in selected_paths:
-            with open(join(folder, f'{label}.fasta') if split else join(folder, 'reconstructed.fasta'), 'w' if split else 'a', encoding="utf-8") as writer:
+            with open(join(folder, f'{label}.fasta') if split else join(folder, f'{Path(gfa_file).stem}.fasta'), 'w' if split else 'a', encoding="utf-8") as writer:
                 writer.write(
                     f">{label}\n{''.join(genomes[label])}\n"
                 )
