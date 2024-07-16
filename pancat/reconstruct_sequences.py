@@ -41,19 +41,27 @@ def reconstruct_paths(gfa_file: str, folder: str, selected_paths: list | bool = 
 def graph_against_fasta(gfa_graph: str, pipeline_txt: str) -> bool:
     with open(pipeline_txt, 'r', encoding='utf-8') as pipeline:
         lines = pipeline.readlines()
-        reconstruction: dict = reconstruct_paths(gfa_graph)
+
+        # We load the graph
+        gfa_graph: Graph = Graph(
+            gfa_file=gfa_graph,
+            with_sequence=True
+        )
+        if len(gfa_graph.paths) > 0:
+            genomes: dict = gfa_graph.reconstruct_sequences()
+
         complete_pangenome_graph: list[bool] = [
             False for _ in range(len(lines))]
         for y, line in enumerate(lines):
             # We assume the pipeline file is in the cactus format
             seq_name, seq_path = line.strip().split('\t')
-            if seq_name in reconstruction:
+            if seq_name in genomes:
                 # Do comparison
                 # We load the file
                 with open(seq_path, 'r', encoding='utf-8') as reader:
                     for record in SeqIO.parse(reader, "fasta"):
                         seq1: str = record.seq.lower()
-                        seq2: str = ''.join(reconstruction[seq_name]).lower()
+                        seq2: str = ''.join(genomes[seq_name]).lower()
                         if len(seq1) != len(seq2):
                             print(
                                 f"[{seq_name}] Length of sequence with header {record.id} does not match the path {seq_name} from a size-perspective (resp. {len(seq1)} vs {len(seq2)}).")
@@ -73,7 +81,7 @@ def graph_against_fasta(gfa_graph: str, pipeline_txt: str) -> bool:
                 print(
                     f"[{seq_name}] Can't find {seq_name} in the paths of the graph.")
         if all(complete_pangenome_graph):
-            print(f"{gfa_graph} is a complete pangenome graph")
+            print(f"\n{gfa_graph} is a complete pangenome graph")
         else:
-            print(f"{gfa_graph} is not a complete pangenome graph")
+            print(f"\n{gfa_graph} is not a complete pangenome graph")
     return all(complete_pangenome_graph)
