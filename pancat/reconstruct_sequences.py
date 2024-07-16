@@ -52,8 +52,8 @@ def graph_against_fasta(gfa_graph: str, pipeline_txt: str) -> bool:
                 x.lower(): y for x, y in gfa_graph.reconstruct_sequences().items()
             }
 
-        print(f'Graph paths: \t{', '.join(genomes.keys())}')
-        print(f'Sequence headers: \t{', '.join(genomes.keys())}\n')
+        print(f"Graph paths: \t{', '.join(genomes.keys())}")
+        print(f"Sequence headers: \t{', '.join(genomes.keys())}\n")
 
         complete_pangenome_graph: list[bool] = [
             False for _ in range(len(lines))]
