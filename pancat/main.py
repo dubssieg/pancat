@@ -11,7 +11,7 @@ from pancat.constants import *
 # TODO Done
 from pancat.offset_in_gfa import add_offsets_to_gfa
 from pancat.grapher import graph_stats, graph_viewer, multigraph_viewer
-from pancat.reconstruct_sequences import reconstruct_paths, graph_against_fasta
+from pancat.reconstruct_sequences import reconstruct_paths, graph_against_fasta, graph_against_multifasta
 # TODO Testing
 from pancat.edit_distance import perform_edition
 from pancat.compress_graph import compress_graph
@@ -180,7 +180,13 @@ parser_complete.add_argument(
     type=str,
     help=HELP_INPUT_PIPELINE,
 )
-
+parser_complete.add_argument(
+    "-m",
+    "--multifasta_mode",
+    help=HELP_PARAM_MULTIFASTA,
+    action='store_true',
+    default=False,
+)
 
 ## Subparser for reconstruct_sequences ##
 
@@ -358,10 +364,16 @@ def main() -> None:
 
     elif args.subcommands == 'complete':
         "This command assess that the graph is a complete pangenome graph."
-        graph_against_fasta(
-            gfa_graph=args.file,
-            pipeline_txt=args.pipeline
-        )
+        if args.multifasta_mode:
+            graph_against_multifasta(
+                gfa_graph=args.file,
+                pipeline_txt=args.pipeline
+            )
+        else:
+            graph_against_fasta(
+                gfa_graph=args.file,
+                pipeline_txt=args.pipeline
+            )
 
     elif args.subcommands == 'grapher':
         "This command aims to render a graph as a PyVis network displayed in html file"
