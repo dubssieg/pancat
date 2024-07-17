@@ -21,13 +21,13 @@ def display_graph(graph: MultiDiGraph, colors_paths: dict[str, str], annotations
         output_path, particle='.html', default_name='graph')
     output_path_temp: str = path_allocator(
         output_path, particle='.tmp.html', default_name='graph')
-    graph_visualizer = Network(
+    graph_visualizer: Network = Network(
         height='1000px', width='100%', directed=True, select_menu=False, filter_menu=False, bgcolor='#ffffff')
     graph_visualizer.set_template_dir(path.dirname(__file__), 'template.html')
     graph_visualizer.toggle_physics(True)
     graph_visualizer.from_nx(graph)
     graph_visualizer.set_edge_smooth('dynamic')
-    html = graph_visualizer.generate_html()
+    html: str = graph_visualizer.generate_html()
     legend: str = '\n'.join(
         [f"<li><span class='{key}'></span> <a href='#'>{key}</a></li>" for key in colors_paths.keys()])
     with open(output_path_temp, "w+", encoding='utf-8') as out:
