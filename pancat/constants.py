@@ -35,3 +35,4 @@ HELP_PARAM_REGEXP: str = "Regexp to filer on for path names. Dealults to no filt
 HELP_PARAM_GRAPH_LEVEL: str = "Asks to perform edition computation at graph level."
 HELP_PARAM_THREADS: str = "Number of threads used for parallelization."
 HELP_PARAM_VERBOSE: str = "Print to log extended information about what is going on."
+HELP_PARAM_MULTIFASTA: str = "Inputs are multifasta and path names should be looked upon headers."
