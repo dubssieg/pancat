@@ -92,3 +92,64 @@ def graph_against_fasta(gfa_graph: str, pipeline_txt: str) -> bool:
         else:
             print(f"\n{gfa_graph} is not a complete pangenome graph")
     return all(complete_pangenome_graph)
+
+
+def graph_against_multifasta(gfa_graph: str, pipeline_txt: str) -> bool:
+
+    with open(pipeline_txt, 'r', encoding='utf-8') as pipeline:
+        lines = pipeline.readlines()
+
+        # We load the graph
+        gfa_graph: Graph = Graph(
+            gfa_file=gfa_graph,
+            with_sequence=True
+        )
+        if len(gfa_graph.paths) > 0:
+            genomes: dict = {
+                x.lower(): y for x, y in gfa_graph.reconstruct_sequences().items()
+            }
+
+        print(f"Graph paths: \t{', '.join(genomes.keys())}")
+        print(f"Sequence headers: \t{', '.join(genomes.keys())}\n")
+
+        complete_pangenome_graph: dict[str, bool] = {
+            path_name: False for path_name in gfa_graph.paths.keys()
+        }
+        for y, line in enumerate(lines):
+            # We assume the pipeline file is in the cactus format
+            seq_name, seq_path = line.strip().split(
+                '\t')[0].lower(), line.strip().split('\t')[1]
+
+            with open(seq_path, 'r', encoding='utf-8') as reader:
+                for record in SeqIO.parse(reader, "fasta"):
+                    if candidate := gfa_graph.compare_pathnames_to_string(record.id):
+                        seq1: str = record.seq.lower()
+                        seq2: str = ''.join(genomes[candidate]).lower()
+                        if len(seq1) != len(seq2):
+                            print(
+                                f"[{candidate}] Length of sequence with header {record.id} does not match the path {candidate} from a size-perspective (resp. {len(seq1)} vs {len(seq2)}).")
+                        else:
+                            densities: list = [0 for _ in range(101)]
+                            for i in range(len(seq1)):
+                                if seq1[i] != seq2[i]:
+                                    densities[round((i/len(seq1))*100)] += 1
+                            if sum(densities) != 0:
+                                print(
+                                    f"[{candidate}] Sequence {record.id} and path have the same length ({len(seq1)}). {round((sum(densities)/len(seq1))*100,2)}% of base pairs are not shared.")
+                            else:
+                                print(
+                                    f"[{candidate}] Sequence {record.id} and path represents the same sequence.")
+                                complete_pangenome_graph[y] = True
+                    else:
+                        print(
+                            f"[{record.id}] Can't find {record.id} in the paths of the graph."
+                        )
+        for path, status in complete_pangenome_graph:
+            if not status:
+                print(
+                    f"[{path}] Missing {path} in fasta files.")
+        if all(complete_pangenome_graph.values()):
+            print(f"\n{gfa_graph} is a complete pangenome graph")
+        else:
+            print(f"\n{gfa_graph} is not a complete pangenome graph")
+    return all(complete_pangenome_graph.values())
