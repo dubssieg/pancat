@@ -12,12 +12,11 @@
 Implementations of many functions for performing various actions on GFA-like graphs in a command-line tool, such as extracting or offseting a pangenome graph.
 Is capable of comparing graphs topology between graphs that happen to contain the same set of sequences. Does pangenome graphs visualisation with interactive html files.
 Uses the [gfagraphs library](https://pypi.org/project/gfagraphs/) to load and manipulate pangenome graphs.
-Details about implementation can be [found here](https://hal.science/hal-04213245) (in french only, sorry).
 
 ![](https://media.discordapp.net/attachments/874430800802754623/1180182798968033280/graph_big.png)
 
 > [!NOTE]\
-> Want to contribute? Feel free to open a PR on an issue about a missing, buggy or incomplete feature!
+> Want to contribute? Feel free to open a PR on an issue about a missing, buggy or incomplete feature! **Please do bug reports in the issue tracker!**.
 
 ## Installation
 
@@ -35,140 +34,25 @@ python -m pip install . --quiet
 ## Troubleshooting
 
 > [!WARNING]\
-> This tool is under heavy devlopment, and so it's [associated library](https://github.com/Tharos-ux/gfagraphs). I advise to update `pip install gfagraphs --upgrade` every now and then, when you update the tool. Any issue to this project is more than welcome, as I could not test all usecases! Feel free to [open one here](https://github.com/Tharos-ux/pancat/issues) if any problems occurs.
+> This tool is under heavy devlopment, and so it's [associated library](https://github.com/Tharos-ux/gfagraphs). I advise to update `pip install gfagraphs --upgrade` every now and then, when you update the tool. Any issue to this project is more than welcome, as I could not test all usecases! Feel free to [open one here](https://github.com/Tharos-ux/pancat/issues) if any problems occurs. **Please do bug reports in the issue tracker as well**.
 
 ## Quick start : provided commands
 
-This program is a collection of tools. Not every function or script is accessible through the front-end `pancat`, but this front-end showcase what the tools can do.
+This program is a collection of tools.
+Not every function or script is accessible through the front-end `pancat`, but this front-end showcase what the tools can do.
 Other tools are in the `scripts` folder. 
 
-Are available through `pancat`:
+Are available in `pancat`:
 
-- **offset** adds relative position information as a tag in GFA file
-- **correct** (WIP, experimental) corrects the graph by adding missing information back into it.
-- **grapher** creates interactive graph representation from a GFA file
-- **multigrapher** creates interactive graph representation of the differnces between two pangenome graphs
-- **stats** gathers basic stats from the input GFA 
-- **complete** assesses if the graph is a complete pangenome graph (all genomes fully embedded in the graph)
-- **reconstruct** recreates the linear sequences from the graph
-- **edit** computes a edit distance between variation graphs
-- **compress** (WIP, experimental) compresses the graph by collapsing substitution bubbles, losselessly
-- **unfold** (WIP, experimental) break cycles in the graph by adding nodes and edges in it
+**edit** - Aligns graphs and tires to compute the minimal set of events that explains how we go from one graph to another.
+**isolate** - Isolates a subgraph within a graph in-between two positions, according to a path or walk in the graph. Extraction only considers other paths and walks that cross both positions.
+**offset** - Add path offsets to a graph. Adds a JSON string, PO (Path Offset) positions, relative to paths in the GFA file. Hence, PO:J:{'w1':[(334,336,'+')],'w2':[(245,247,'-'),(336,338,'-')]} tells that the walk/path w1 contains the sequence starting at position 334 and ending at position 336, and the walk/path w2 contains the sequence starting at the offset 245 (ending 247) and crosses it a second time between position 336 and 338, and that the sequences are reversed one to each other. Note that any non-referenced walk in this field means that the node is not inside the given walk.
+**complete** - Asserts if the graph is a complete pangenome graph. A complete pangenome graph is a sequence graph where all the genomes used to build the graph are exactly contained in the graph.
+**grapher** - Creates a html view of the graph. Huge graphs may take long time to display, or might be messy. Advice would be to extract parts you want to display (with pancat isolate for instance), then computes the vizualisation on the selected part.
+**multigrapher** - Creates a html view of the alignment of two graphs. Huge graphs may take long time to display, or might be messy. Advice would be to extract parts you want to display (with pancat isolate for instance), then computes the vizualisation on the selected part.
+**stats** - Retrieves basic stats on a pangenome graph.
+**reconstruct** - Reconstruct linear sequences from a GFA graph. Given a GFA file with paths, reconstruct a linear sequence for each haplotype between two offsets.
+**unfold** - [WIP] Break cycles of a graph with paths or walks. Aims to linearize the graph by creating new nodes and connecting them in the graph.
+**compress** - [WIP] Does a compression of the graph, merging simple non-conflicting substitution bubbles.
 
-Were available before (and will be back soon):
-- **isolate** extracts a subgraph from positions in the paths
-- **neigborhood** extracts a subgraph from a set of nodes around a node
-- **cycles** detect and (optionnally) linearizes all loops in graph
-
-## Render interactive html view
-
-With this command, you can create a html interactive view of your graph, with sequence in the nodes (S-lines) and nodes connected by edges (L-lines). If additional information is given (as such as W-lines or P-lines), supplementary edges will be drawn in order to show the path that the genomes follows in the graph.
-
-```bash
-pancat grapher [-h] [-b BOUNDARIES [BOUNDARIES ...]] file output
-
-positional arguments:
-  file                  Path to a gfa-like file
-  output                Output path for the html graph file.
-
-options:
-  -h, --help            show this help message and exit
-  -b BOUNDARIES [BOUNDARIES ...], --boundaries BOUNDARIES [BOUNDARIES ...]
-                        One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp
-                        and one for nodes in range 2001-inf bp).
-```
-
-When using this command, please only work with graphs with under 10k nodes. To do so, you may flatten the graph or extract subgraphs (using for instance **pancat neighborhood** or **pancat isolate**).
-
-The `-b`/`--boundaries` option lets you choose size classes to differentiate. They will have a different color, and their number will be computed separately.
-
-The `output` argument may be : a path to a folder (existing or not) or a path to a file (with .HTML extension or not).
-
-## Compute stats on your graph
-
-With this command, you can output basic stats on your graph.
-
-```bash
-pancat stats [-h] [-b BOUNDARIES [BOUNDARIES ...]] file
-
-positional arguments:
-  file                  Path to a gfa-like file
-
-options:
-  -h, --help            show this help message and exit
-  -b BOUNDARIES [BOUNDARIES ...], --boundaries BOUNDARIES [BOUNDARIES ...]
-                        One or a list of ints to use as boundaries for display (ex : -b 50 2000 will set 3 colors : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp
-                        and one for nodes in range 2001-inf bp).
-```
-
-This program displays stats in command-line (stdout). You may pipe it to a file if you want to use it on a cluster. (pancat stats graph.gfa > out.txt)
-
-The `-b`/`--boundaries` option lets you choose size classes to differentiate. Their number will be computed separately.
-
-## Extract sequences from the graph
-
-With this command, you can reconstruct linear sequences from the graph.
-
-```bash
-pancat reconstruct [-h] -r REFERENCE [--start START] [--stop STOP] [-s] file out
-
-positional arguments:
-  file                  Path to a gfa-like file
-  out                   Output path (without extension)
-
-options:
-  -h, --help            show this help message and exit
-  -r REFERENCE, --reference REFERENCE
-                        Tells the reference sequence we seek start and stop into
-  --start START         To specifiy a starting node on reference to create a subgraph
-  --stop STOP           To specifiy a ending node on reference to create a subgraph
-  -s, --split           Tells to split in different files
-```
-
-For this function, the `-r`/`--reference` option is needed only if you specify starting and ending points.
-
-## Adding coordinate system
-
-With this command, you ca add a JSON GFA-compatible string to each S-line of the graph (each node). This field will contain starting position, ending position and orientation, for each path in the graph.
-
-```bash
-pancat offset [-h] file out
-
-positional arguments:
-  file        Path to a gfa-like file
-  out         Output path (with extension)
-
-options:
-  -h, --help  show this help message and exit
-```
-
-## Compute edition between graphs
-
-In order to compare two graphs, they need to :
-+ have at least some shared paths
-+ the reconstruction of those shared paths must yield the same sequences
-
-If those criteria are met, you may compare your graphs.
-
-```bash
-pancat edit [-h] -o OUTPUT_PATH [-p PATTERN] [-g] [-c CORES] [-s [SELECTION ...]] [-t] graph_A graph_B
-
-positional arguments:
-  graph_A               Path to a GFA-like file.
-  graph_B               Path to a GFA-like file.
-
-options:
-  -h, --help            show this help message and exit
-  -o OUTPUT_PATH, --output_path OUTPUT_PATH
-                        Path to a .json output for results.
-  -p PATTERN, --pattern PATTERN
-                        Regexp to filter if present in path/walks names.
-  -g, --graph_level     Asks to perform edition computation at graph level.
-  -c CORES, --cores CORES
-                        Number of cores for computing edition
-  -s [SELECTION ...], --selection [SELECTION ...]
-                        Names of the paths you want to compute edition on.
-  -t, --trace_memory    Print to log file memory usage of data structures.
-```
-
-It also now supports regexp to easily match paths that are differing, as for instance in HPRC files where `pancat edit $CACTUS $PGGB --output_path $WD"hprc_21_edition.json" --graph_level --cores 16 --pattern "^(.+?)#" --trace_memory` can be used to compare individual chromosoms.
+At any point, one can use `pancat -h` to get the manpage of the tool and its available subcommands, and also can display the help for a specific command (let's say **edit**) with `pancat edit -h`.
