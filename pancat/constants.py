@@ -28,9 +28,9 @@ HELP_OUTPUT_JSON_LOG: str = "Path to a .json or .log output file for results. If
 # Parameters
 HELP_PARAM_BOUNDARIES: str = "One or more integers to use as boundaries for node size classes (e.g. -b 50 2000 will set 3 classes : one for nodes in range 0-50bp, one for nodes in range 51-2000 bp and one for nodes in range 2001-inf bp)."
 HELP_PARAM_MINIMIZE: str = "Saves the graph with a minimal set of informations (for compatibiliy purposes with software such as odgi or vg)"
-HELP_PARAM_SPLIT: str = "If enlabed, each record will be "
+HELP_PARAM_SPLIT: str = "If enlabed, each record will be saved to a distinct file"
 HELP_PARAM_LENGTH: str = "Maximum length of substitutions to compress"
-HELP_PARAM_PATHSELECT: str = "Name(s) for the paths you want to apply method onto. For W-lines, it is the 4th field, whereas for P-lines it is the 2nd one."
+HELP_PARAM_PATHSELECT: str = "Name(s) for the paths you want to apply method onto. For W-lines, it is the 2, 3 and 4th field separated with '#', whereas for P-lines it is the 2nd one."
 HELP_PARAM_REGEXP: str = "Regexp to filer on for path names. Dealults to no filtering."
 HELP_PARAM_GRAPH_LEVEL: str = "Asks to perform edition computation at graph level."
 HELP_PARAM_THREADS: str = "Number of threads used for parallelization."
