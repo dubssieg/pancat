@@ -3,10 +3,9 @@ from os import path, remove
 from json import load
 from networkx import MultiDiGraph, compose
 from pyvis.network import Network
-from pgGraphs import Graph
 from tharospytools.path_tools import path_allocator
-from pgGraphs import GFANetwork, Graph as pgGraph
 from tharospytools.list_tools import grouper
+from gfagraphs import Graph, GFANetwork, GFAParser
 
 
 def display_graph(graph: MultiDiGraph, colors_paths: dict[str, str], annotations: dict, output_path: str) -> None:
@@ -37,11 +36,19 @@ def display_graph(graph: MultiDiGraph, colors_paths: dict[str, str], annotations
             for line in html_file:
                 if "<div class='sidenav'>" in line:
                     html_writer.write(
-                        f"""{line}{''.join(["<a href='#' title=''>"+str(key)+" : <b>"+str(value)+"</b></a>" for key,value in annotations.items()])}\n<ul class='legend'>{legend}</ul>"""
+                        f"""{line}{''.join(
+                            [
+                                "<a href='#' title=''>"+str(key)+" : <b>"+str(value)+"</b></a>" for key,value in annotations.items()
+                                ]
+                                )}\n<ul class='legend'>{legend}</ul>"""
                     )
                 elif "/* your colors */" in line:
-                    html_writer.write(''.join(
-                        [".legend ."+key+" { background-color: "+val+"; }" for key, val in colors_paths.items()]))
+                    html_writer.write(
+                        ''.join(
+                            [".legend ."+key+" { background-color: "+val +
+                                "; }" for key, val in colors_paths.items()]
+                        )
+                    )
                 else:
                     html_writer.write(line)
     if path.exists(output_path_temp):
@@ -97,7 +104,9 @@ def multigraph_viewer(
     file_editions: str,
     boundaries: list,
     output: str,
-    start_stop: tuple | bool = False,
+    reference: str | None = None,
+    start: int | None = None,
+    end: int | None = None,
 ) -> None:
     """Renders a digraph alignment and explicits their connexions inbetween them.
 
@@ -108,18 +117,30 @@ def multigraph_viewer(
         boundaries (list): list of node class sizes
         output (str): output for html file
     """
-    bounds = grouper(
+    bounds: list[tuple[int, int]] = grouper(
         [0] + [bound+x for bound in boundaries for x in [0, 1]] + [float('inf')], n=2, m=1
-    )
+    )[::2]
 
     # Creating pgGraphs object
-    gfa_graph_A: pgGraph = pgGraph(
-        gfa_file=file_A,
-        with_sequence=True
+    gfa_graph_A: Graph = clean_graph(
+        extract_subgraph(
+            gfa_path=file_A,
+            x=start,
+            y=end,
+            sequence=reference,
+            output='temp_A.gfa',
+            save_to_file=False,
+        )
     )
-    gfa_graph_B: pgGraph = pgGraph(
-        gfa_file=file_B,
-        with_sequence=True
+    gfa_graph_B: Graph = clean_graph(
+        extract_subgraph(
+            gfa_path=file_B,
+            x=start,
+            y=end,
+            sequence=reference,
+            output='temp_B.gfa',
+            save_to_file=False,
+        )
     )
 
     # Computing NetworkX structure
@@ -146,8 +167,9 @@ def multigraph_viewer(
         current_counter_B: int = 0
         node_index_A: int = 0
         node_index_B: int = 0
+        edge_bank: dict[tuple, str] = dict()
         for style in ['merges', 'splits']:
-            for pos, [node] in edition[style]:
+            for pos, [node_A, node_B] in edition[style]:
                 while current_counter_A < pos:
                     current_counter_A += gfa_graph_A.segments[gfa_graph_A.paths[path]
                                                               ['path'][node_index_A][0]]['length']
@@ -156,17 +178,21 @@ def multigraph_viewer(
                     current_counter_B += gfa_graph_B.segments[gfa_graph_B.paths[path]
                                                               ['path'][node_index_B][0]]['length']
                     node_index_B += 1
-                if not full_graph.has_edge(
+                current_value = '0:0' if (x := (
                     f"A_{gfa_graph_A.paths[path]['path'][node_index_A-1][0]}",
                     f"B_{gfa_graph_B.paths[path]['path'][node_index_B-1][0]}"
-                ):
-                    full_graph.add_edge(
-                        f"A_{gfa_graph_A.paths[path]['path'][node_index_A-1][0]}",
-                        f"B_{gfa_graph_B.paths[path]['path'][node_index_B-1][0]}",
-                        arrows='',
-                        alpha=.5,
-                        color='red' if style == 'merges' else 'blue'
-                    )
+                )) not in edge_bank else edge_bank[x]
+                edge_bank[x] = f"{int(current_value.split(':')[0])+1}:{int(current_value.split(':')[1])}" if style == 'merges' else f"{int(current_value.split(':')[0])}:{int(current_value.split(':')[1])+1}"
+    for (a, b), label_ms in edge_bank.items():
+        full_graph.add_edge(
+            a,
+            b,
+            arrows='',
+            alpha=.5,
+            color='blue',
+            label=label_ms,
+        )
+
     stats_A = compute_stats(
         graph=gfa_graph_A,
         length_classes=tuple(bounds)
@@ -192,17 +218,32 @@ def multigraph_viewer(
 def graph_viewer(
     file: str,
     output: str,
-    boundaries: list
+    boundaries: list,
+    start: int | None = None,
+    end: int | None = None,
+    reference: str | None = None,
 ) -> None:
-    bounds = grouper(
+    bounds: list[tuple[int, int]] = grouper(
         [0] + [bound+x for bound in boundaries for x in [0, 1]] + [float('inf')], n=2, m=1
-    )
+    )[::2]
 
     # Creating pgGraphs object
-    gfa_graph: pgGraph = pgGraph(
-        gfa_file=file,
-        with_sequence=True
-    )
+    if start is None and end is None:
+        gfa_graph: Graph = Graph(
+            gfa_file=file,
+            with_sequence=True
+        )
+    else:
+        gfa_graph: Graph = clean_graph(
+            *extract_subgraph(
+                gfa_path=file,
+                x=start,
+                y=end,
+                sequence=reference,
+                output='temp.gfa',
+                save_to_file=False,
+            )
+        )
 
     # Computing NetworkX structure
     pangenome_graph: MultiDiGraph = GFANetwork.compute_networkx(
@@ -230,7 +271,7 @@ def graph_stats(file: str, boundaries: list) -> None:
     )
 
     # Creating pgGraphs object
-    gfa_graph: pgGraph = pgGraph(
+    gfa_graph: Graph = Graph(
         gfa_file=file,
         with_sequence=True
     )
@@ -242,3 +283,170 @@ def graph_stats(file: str, boundaries: list) -> None:
     )
     for key, value in graph_stats.items():
         print(f"{key}: {value}")
+
+
+def load_graph(graph_path: str) -> Graph:
+    """Load a graph in memory and computes its offsets
+
+    Parameters
+    ----------
+    graph_path : str
+        path to a valid gfa file
+
+    Returns
+    -------
+    Graph
+        annotated gfagraphs object
+    """
+    gfa: Graph = Graph(
+        gfa_file=graph_path,
+        with_sequence=True,
+        with_reverse_edges=False,
+        low_memory=False,
+        regexp='.*',
+    )
+    gfa.compute_neighbors()
+    gfa.sequence_offsets()
+    return gfa
+
+
+def find_anchors(gfa: Graph, interval: tuple[int, int], reference: str) -> tuple[str, str]:
+    """Finds the pair of nodes that corresponds to start and end positions
+
+    Parameters
+    ----------
+    gfa : Graph
+        loaded and anotated gfa graph
+    positions : tuple[int,int]
+        a couple of (start,stop) positions
+    path_name : str
+        name of the path for positions
+
+    Returns
+    -------
+    tuple[str,str]
+        a tuple of node names
+    """
+    if interval[0] > interval[1]:
+        interval = (interval[1], interval[0])
+    if interval[0] < 0:
+        interval = (0, interval[1])
+    if interval[1] > (ln := sum(gfa.segments[x]['length'] for x, _ in gfa.paths[reference]['path'])) or interval[0] > interval[1]:
+        interval = (interval[0], ln)
+
+    encountered_nodes: dict[str, int] = {}
+    start: bool | str = False
+    stop: bool | str = False
+    for node, _ in gfa.paths[reference]['path']:
+        if gfa.segments[node]['PO'][reference][encountered_nodes.get(node, 0)][1] >= interval[0] and not start:
+            start = node
+            stac: int = encountered_nodes.get(node, 0)
+        if gfa.segments[node]['PO'][reference][encountered_nodes.get(node, 0)][1] >= interval[1] and start and not stop:
+            stop = node
+            stoc: int = encountered_nodes.get(node, 0)
+        encountered_nodes[node] = encountered_nodes.get(node, 0) + 1
+    return ((start, stac), (stop, stoc))
+
+
+def extract_subgraph(gfa_path: str, x: int, y: int, sequence: str, output: str, save_to_file: bool = True) -> None:
+    """Gathers the subgraph from two points on a reference
+
+    Parameters
+    ----------
+    gfa_path : str
+        path to file
+    x : int
+        start point
+    y : int
+        end point
+    sequence : str
+        reference genome for positions
+    output : str
+        path to output file
+    """
+    gfa_graph: Graph = load_graph(gfa_path)
+
+    ((source, stac), (sink, stoc)) = find_anchors(
+        gfa=gfa_graph,
+        interval=(x, y),
+        reference=sequence,
+    )
+
+    # Search all subpaths (even loops)
+    path_dict: dict = dict()
+    for path_name, path_data in gfa_graph.paths.items():
+        loops_over_path: int = 0
+        source_index, sink_index = None, None
+        for i, (seg_name, _) in enumerate(path_data['path']):
+
+            if seg_name == source:
+                source_index: int = i
+                source_offsets: tuple = gfa_graph.segments[seg_name]['PO'][sequence][loops_over_path]
+
+            if seg_name == sink:
+                sink_index: int = i
+                sink_offsets: tuple = gfa_graph.segments[seg_name]['PO'][sequence][loops_over_path]
+
+            if source_index is not None and sink_index is not None:
+                # Write new path
+                if source_index > sink_index:
+                    new_path: list[tuple] = path_data['path'][sink_index:source_index+1]
+                else:
+                    new_path: list[tuple] = path_data['path'][source_index:sink_index+1]
+                start_position: int = min(
+                    source_offsets[0], sink_offsets[0], source_offsets[1], sink_offsets[1])
+                end_position: int = max(
+                    source_offsets[0], sink_offsets[0], source_offsets[1], sink_offsets[1])
+                path_dict[f"{path_name}#{loops_over_path}"] = {
+                    "name": f"{path_name}#{loops_over_path}",
+                    "start_offset": start_position,
+                    "stop_offset": end_position,
+                    "path": new_path,
+                }
+                # Reset indexes
+                source_index, sink_index = None, None
+                loops_over_path += 1
+
+    gfa_graph.paths = path_dict
+
+    selected_nodes_set: set[str] = {
+        x for z in path_dict.values() for x, _ in z['path']
+    }
+
+    if not save_to_file:
+        return (gfa_graph, selected_nodes_set)
+    GFAParser.save_subgraph(
+        graph=gfa_graph,
+        output_path=output,
+        nodes=selected_nodes_set,
+        force_format=False,
+        minimal_graph=True
+    )
+
+
+def clean_graph(gfa_graph: Graph, node_between_set: set[str]) -> Graph:
+    """Cleans the graph by removing any node that is not in the set.
+    Edits paths to reflect the changes.
+    Edits edges to reflect the changes.
+
+    Parameters
+    ----------
+    gfa_graph : Graph
+        a gfagraphs objet
+    node_between_set : set[str]
+        nodes to keep
+
+    Returns
+    -------
+    Graph
+        a graph that has been cleaned
+    """
+    gfa_graph.segments = {
+        node_name: node_data for node_name, node_data in gfa_graph.segments.items() if node_name in node_between_set}
+    for path_data in gfa_graph.paths.values():
+        path_data['path'] = [
+            (node, vect) for node, vect in path_data['path'] if node in node_between_set]
+    gfa_graph.lines = {
+        (source, sink): line_data for (source, sink), line_data in gfa_graph.lines.items() if source in node_between_set and sink in node_between_set
+    }
+    return gfa_graph
