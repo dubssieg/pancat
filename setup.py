@@ -13,7 +13,7 @@ if CURRENT_PYTHON < REQUIRED_PYTHON:
 
 setup(
     name=NAME,
-    version='0.3.0',
+    version='0.3.1',
     description='Tools for manipulating and visualizing GFA file format',
     url='https://github.com/Tharos-ux/pancat',
     author='Tharos',
