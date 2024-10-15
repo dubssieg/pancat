@@ -10,13 +10,12 @@ from tharospytools.path_tools import path_allocator
 from pancat.constants import *
 # TODO Done
 from pancat.offset_in_gfa import add_offsets_to_gfa
-from pancat.grapher import graph_stats, graph_viewer, multigraph_viewer
+from pancat.grapher import graph_stats, graph_viewer, multigraph_viewer, extract_subgraph
 from pancat.reconstruct_sequences import reconstruct_paths, graph_against_fasta, graph_against_multifasta
 # TODO Testing
 from pancat.edit_distance import perform_edition
 from pancat.compress_graph import compress_graph
 from pancat.correct import correct_graph
-from pancat.isolate_subgraph import extract_subgraph
 # TODO Rebuilding
 from pancat.find_bubbles import linearize_bubbles
 from pancat.cyclotron import get_graph_cycles
@@ -108,6 +107,27 @@ parser_grapher.add_argument(
     nargs='+',
     default=[50],
 )
+parser_grapher.add_argument(
+    '-r',
+    '--reference',
+    type=str,
+    help=HELP_INPUT_REFERENCE,
+    default=None,
+)
+parser_grapher.add_argument(
+    '-s',
+    '--start',
+    type=int,
+    help=HELP_INPUT_START_POSITION,
+    default=None,
+)
+parser_grapher.add_argument(
+    '-e',
+    '--end',
+    type=int,
+    help=HELP_INPUT_END_POSITION,
+    default=None,
+)
 
 ## Subparser for multigrapher ##
 
@@ -142,6 +162,27 @@ parser_multigrapher.add_argument(
     help=HELP_PARAM_BOUNDARIES,
     nargs='+',
     default=[50],
+)
+parser_multigrapher.add_argument(
+    '-r',
+    '--reference',
+    type=str,
+    help=HELP_INPUT_REFERENCE,
+    default=None,
+)
+parser_multigrapher.add_argument(
+    '-s',
+    '--start',
+    type=int,
+    help=HELP_INPUT_START_POSITION,
+    default=None,
+)
+parser_multigrapher.add_argument(
+    '-e',
+    '--end',
+    type=int,
+    help=HELP_INPUT_END_POSITION,
+    default=None,
 )
 
 ## Subparser for stats ##
@@ -221,7 +262,7 @@ parser_reconstruct.add_argument(
 ## Subparser for edit_distance ##
 
 parser_edit: ArgumentParser = subparsers.add_parser(
-    'edit',
+    'compare',
     help=HELP_COMMAND_EDIT,
 )
 parser_edit.add_argument(
@@ -380,7 +421,10 @@ def main() -> None:
         graph_viewer(
             file=args.file,
             output=args.output,
-            boundaries=args.boundaries
+            boundaries=args.boundaries,
+            reference=args.reference,
+            start=args.start,
+            end=args.end,
         )
 
     elif args.subcommands == 'multigrapher':
@@ -391,6 +435,9 @@ def main() -> None:
             file_editions=args.editions,
             boundaries=args.boundaries,
             output=args.output,
+            reference=args.reference,
+            start=args.start,
+            end=args.end,
         )
 
     elif args.subcommands == 'stats':
@@ -436,7 +483,7 @@ def main() -> None:
             )
         )
 
-    elif args.subcommands == 'edit':
+    elif args.subcommands == 'compare':
         perform_edition(
             gfa_A=args.graph_A,
             gfa_B=args.graph_B,
