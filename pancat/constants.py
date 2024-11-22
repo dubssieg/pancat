@@ -36,3 +36,4 @@ HELP_PARAM_GRAPH_LEVEL: str = "Asks to perform edition computation at graph leve
 HELP_PARAM_THREADS: str = "Number of threads used for parallelization."
 HELP_PARAM_VERBOSE: str = "Print to log extended information about what is going on."
 HELP_PARAM_MULTIFASTA: str = "Inputs are multifasta and path names should be looked upon headers."
+HELP_PARAM_FORCERGFA: str = "Forces the input to be treated as an rGFA file."
