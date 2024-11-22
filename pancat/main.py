@@ -470,6 +470,7 @@ def main() -> None:
             file=args.file,
             output=args.output,
             boundaries=args.boundaries,
+            force_rgfa=args.force_rgfa,
             reference=args.reference,
             start=args.start,
             end=args.end,
