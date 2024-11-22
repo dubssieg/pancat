@@ -3,7 +3,7 @@ from os import path, remove
 from json import load
 from networkx import MultiDiGraph, compose
 from pyvis.network import Network
-from gfagraphs import Graph, GFANetwork, GFAParser
+from gfagraphs import Graph, GFANetwork, GFAParser, GFAFormat
 from os.path import exists, isdir
 from pathlib import Path
 from typing import Iterable
@@ -273,6 +273,7 @@ def graph_viewer(
     file: str,
     output: str,
     boundaries: list,
+    force_rgfa: bool,
     start: int | None = None,
     end: int | None = None,
     reference: str | None = None,
@@ -302,8 +303,9 @@ def graph_viewer(
     # Computing NetworkX structure
     pangenome_graph: MultiDiGraph = GFANetwork.compute_networkx(
         graph=gfa_graph,
+        enforce_format=GFAFormat.RGFA if force_rgfa else GFAFormat.GFA1,
         node_prefix=None,
-        node_size_classes=bounds
+        node_size_classes=bounds,
     )
 
     # Computing stats and displaying
@@ -315,7 +317,7 @@ def graph_viewer(
         graph=pangenome_graph,
         colors_paths=gfa_graph.metadata['colors'],
         annotations=stats,
-        output_path=output
+        output_path=output,
     )
 
 

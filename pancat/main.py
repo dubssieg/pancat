@@ -169,6 +169,13 @@ parser_grapher.add_argument(
     help=HELP_INPUT_END_POSITION,
     default=None,
 )
+parser_grapher.add_argument(
+    "-f",
+    "--force_rgfa",
+    help=HELP_PARAM_FORCERGFA,
+    action='store_true',
+    default=False,
+)
 
 ## Subparser for multigrapher ##
 
