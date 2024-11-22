@@ -2,14 +2,51 @@
 from json import dump
 from pgGraphs import Graph
 from logging import info
-from tharospytools.multithreading import futures_collector
-from tharospytools.logging_tools import logs_config, timing
-from datetime import datetime
 from os import getpid
 from psutil import Process
+from sys import stderr
+from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import cpu_count
+from typing import Callable
+from collections.abc import Iterable
 
 
-@timing
+def futures_collector(
+    func: Callable,
+        argslist: list,
+        kwargslist: list[dict] | None = None,
+        num_processes: int = cpu_count(),
+) -> list:
+    """
+    Spawns len(arglist) instances of func and executes them at num_processes instances at time.
+
+    * func : a function
+    * argslist (list): a list of tuples, arguments of each func
+    * kwargslist (list[dict]) a list of dicts, kwargs for each func
+    * num_processes (int) : max number of concurrent instances.
+        Default : number of available logic cores
+    * memory (float|None) : ratio of memory to be used, ranging from .05 to .95. Will not work if *resource* is incompatible.
+    """
+    if kwargslist is None or len(kwargslist) == len(argslist):
+        with ThreadPoolExecutor(max_workers=num_processes) as executor:
+            futures = [
+                executor.submit(
+                    func,
+                    *args if isinstance(args, Iterable) else args
+                ) if kwargslist is None else
+                executor.submit(
+                    func,
+                    *args if isinstance(args, Iterable) else args,
+                    **kwargslist[i]
+                ) for i, args in enumerate(argslist)
+            ]
+        return [f.result() for f in futures]
+    else:
+        raise ValueError(
+            f"""Positionnal argument list length ({len(argslist)})
+            does not match keywords argument list length ({len(kwargslist)}).""")
+
+
 def perform_edition(
         gfa_A: str,
         gfa_B: str,
@@ -37,7 +74,6 @@ def perform_edition(
     Returns:
         tuple: results from the edition
     """
-    logs_config(verbose=True)
     base_interpeter_memory: int = Process(
         getpid()).memory_info().rss / 1024 ** 2
     graph_A: Graph = Graph(
@@ -140,9 +176,14 @@ def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str])
     print(f"PATH SELECTION: {selected_paths}")
     # Iterating on each pair of paths
     for path_name in selected_paths:
+        print(f"Processing path: {path_name}", file=stderr)
 
         i: int = 0  # counter of segmentations on graph_A
         j: int = 0  # counter of segmentations on graph_B
+
+        equivalences_count: int = 0  # counter of equivalences
+        splits_count: int = 0  # counter of splits
+        merges_count: int = 0  # counter of merges
 
         merges: set[tuple[int, tuple[str]]] = set()  # set for merges
         splits: set[tuple[int, tuple[str]]] = set()  # set for merges
@@ -151,6 +192,7 @@ def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str])
         pos_B: int = 0  # Absolute position in BP on B
 
         global_pos: int = 0  # Position across both genomes
+        global_list: list[int] = list()
 
         # Iterating until we did not go through both segmentations
         while i < len(graph_A.paths[path_name]['path']) and j < len(graph_B.paths[path_name]['path']):
@@ -175,6 +217,7 @@ def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str])
             # We added the interval to current positions
             match (global_pos-pos_A == graph_A.segments[current_node_A]['length'], global_pos-pos_B == graph_B.segments[current_node_B]['length']):
                 case (True, True):
+                    equivalences_count += 1
                     # Iterating on both, no edition needed
                     pos_A += graph_A.segments[current_node_A]['length']
                     pos_B += graph_B.segments[current_node_B]['length']
@@ -182,6 +225,9 @@ def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str])
                     j += 1
                 case (True, False):
                     # Iterating on top, split required
+                    print(
+                        f"{path_name}\t{global_pos}\tS\t{current_node_A}\t{current_node_B}", file=stderr)
+                    splits_count += 1
                     splits.add(
                         (
                             global_pos,
@@ -195,6 +241,9 @@ def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str])
                     i += 1
                 case (False, True):
                     # Iterating on bottom, merge required
+                    print(
+                        f"{path_name}\t{global_pos}\tM\t{current_node_A}\t{current_node_B}", file=stderr)
+                    merges_count += 1
                     merges.add(
                         (
                             global_pos,
@@ -213,7 +262,8 @@ def path_level_edition(graph_A: Graph, graph_B: Graph, selected_paths: set[str])
             'merges': sorted(list(merges)),
             'splits': sorted(list(splits))
         }
-
+        print(
+            f"# Path {path_name} has {equivalences_count} equivalences, {merges_count} merges and {splits_count} splits")
     return edition_results
 
 

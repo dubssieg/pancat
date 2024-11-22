@@ -1,6 +1,5 @@
 'Extract sequences given a graph'
 from Bio import SeqIO
-from tharospytools.bio_tools import revcomp
 from pgGraphs import Graph
 from os.path import join
 from pathlib import Path
