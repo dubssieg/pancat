@@ -3,10 +3,8 @@ seaborn
 numpy
 pyvis
 networkx
-mycolorpy
 levenshtein
 gfagraphs
-tharos-pytools
 BubbleGun
 statsmodels
 resource
