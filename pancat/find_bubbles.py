@@ -1,8 +1,97 @@
 from typing import Generator
 from pgGraphs import Graph
-from tharospytools.bio_tools import revcomp
-from tharospytools.list_tools import flatten
-from tharospytools.path_tools import path_allocator
+from typing import Generator, Callable
+from os.path import exists, isdir
+from pathlib import Path
+
+
+def path_allocator(
+    path_to_validate: str,
+    particle: str | None = None,
+    default_name: str = 'file',
+    always_yes: bool = True
+) -> str:
+    """Checks if a file exists in this place, and arborescence exists.
+    If not, creates the arborescence
+
+    Args:
+        path_to_validate (str): a string path to the file
+        particle (str | None, optional): file extension. Defaults to None.
+        default_name (str): a name if name is empty
+        always_yes (bool, optional): if file shall be erased by default. Defaults to True.
+
+    Returns:
+        str: the path to the file, with extension
+    """
+    if ('/') in path_to_validate:
+        if isdir(path_to_validate) and not path_to_validate.endswith('/'):
+            path_to_validate = path_to_validate + '/'
+        folder_path, sep, file_name = path_to_validate.rpartition('/')
+    else:
+        folder_path = ""
+        sep = ""
+        file_name = path_to_validate
+    if file_name == "":
+        file_name = default_name
+    if particle and not file_name.endswith(particle):
+        file_name = file_name+particle
+    full_path: str = folder_path+sep+file_name
+    if not always_yes and exists(full_path):
+        if not input('File already exists. Do you want to write over it? (y/n): ').lower().strip() == 'y':
+            raise OSError("File already exists. Aborting.")
+    if folder_path != "":
+        Path(folder_path).mkdir(parents=True, exist_ok=True)
+    return full_path
+
+
+def revcomp(string: str, compl: dict = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N'}) -> str:
+    """Tries to compute the reverse complement of a sequence
+
+    Args:
+        string (str): original character set
+        compl (dict, optional): dict of correspondances. Defaults to {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}.
+
+    Raises:
+        IndexError: Happens if revcomp encounters a char that is not in the dict
+
+    Returns:
+        str: the reverse-complemented string
+    """
+    try:
+        return ''.join([compl[s] for s in string][::-1])
+    except IndexError as exc:
+        raise IndexError(
+            "Complementarity does not include all chars in sequence.") from exc
+
+
+def cast(dtype: type):
+    """Allows dynamic cast for generators
+
+    Args:
+        dtype (type): a data type
+    """
+    def funchandler(func: Callable):
+        def funcwrapper(*args: list, **kwargs: dict):
+            return dtype(func(*args, **kwargs))
+        return funcwrapper
+    return funchandler
+
+
+@cast(list)
+def flatten(list_to_flatten: list) -> Generator:
+    """Flattens a potentially multi-level list
+
+    Args:
+        list_to_flatten (list): a list eventually containing other lists and elts
+
+    Yields:
+        Generator: series of elements, converted by decorator to a list
+    """
+    for elt in list_to_flatten:
+        if isinstance(elt, list):
+            yield from flatten(elt)
+        else:
+            yield elt
 
 
 def grouper(iterable, n=2, m=1):
