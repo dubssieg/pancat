@@ -177,7 +177,7 @@ def multigraph_viewer(
 
     # Creating pgGraphs object
     gfa_graph_A: Graph = clean_graph(
-        extract_subgraph(
+        *extract_subgraph(
             gfa_path=file_A,
             x=start,
             y=end,
@@ -187,7 +187,7 @@ def multigraph_viewer(
         )
     )
     gfa_graph_B: Graph = clean_graph(
-        extract_subgraph(
+        *extract_subgraph(
             gfa_path=file_B,
             x=start,
             y=end,
