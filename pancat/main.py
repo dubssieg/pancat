@@ -6,7 +6,7 @@ from json import dump
 from os.path import exists
 from pathlib import Path
 from rich import print
-from pgGraphs import Graph as pgGraph
+from gfagraphs import Graph as pgGraph
 from pancat.constants import *
 # TODO Done
 from pancat.offset_in_gfa import add_offsets_to_gfa

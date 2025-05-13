@@ -3,7 +3,7 @@ pancat correct is about to iterate through the graph, and fix small mistakes mad
     - (TBI) correct missing edges in the graph according to paths taht are described in the file
 """
 from itertools import pairwise
-from pgGraphs import Graph
+from gfagraphs import Graph
 
 
 def correct_edges(gfa_graph: Graph) -> None:

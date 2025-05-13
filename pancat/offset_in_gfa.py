@@ -9,7 +9,7 @@ and that the sequences are reversed one to each other.
 Note that any non-referenced walk in this field means that the node
 is not inside the given walk.
 """
-from pgGraphs import Graph
+from gfagraphs import Graph
 
 
 def add_offsets_to_gfa(gfa_file: str, output_file: str) -> None:

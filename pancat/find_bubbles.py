@@ -1,5 +1,5 @@
 from typing import Generator
-from pgGraphs import Graph
+from gfagraphs import Graph
 from typing import Generator, Callable
 from os.path import exists, isdir
 from pathlib import Path
