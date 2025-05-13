@@ -1,4 +1,4 @@
-from pgGraphs import Graph
+from gfagraphs import Graph
 
 
 def revcomp(string: str, compl: dict = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N'}) -> str:

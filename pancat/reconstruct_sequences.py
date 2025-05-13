@@ -1,6 +1,6 @@
 'Extract sequences given a graph'
 from Bio import SeqIO
-from pgGraphs import Graph
+from gfagraphs import Graph
 from os.path import join
 from pathlib import Path
 

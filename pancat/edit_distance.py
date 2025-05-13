@@ -1,6 +1,6 @@
 "Computes edition between pangenome graphs"
 from json import dump
-from pgGraphs import Graph
+from gfagraphs import Graph
 from logging import info
 from os import getpid
 from psutil import Process

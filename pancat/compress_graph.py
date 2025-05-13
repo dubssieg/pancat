@@ -3,8 +3,8 @@ This WIP algorithm is designed to losselesly compress graph in order to reduce t
     - compressiong 1-sized substitutions bubbles
     - tba
 """
-from pgGraphs import Graph
-from pgGraphs.abstractions import Orientation
+from gfagraphs import Graph
+from gfagraphs.abstractions import Orientation
 from itertools import pairwise
 from collections import Counter
 
