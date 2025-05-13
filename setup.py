@@ -34,7 +34,6 @@ setup(
         'mycolorpy',
         'levenshtein',
         'gfagraphs',
-        'tharos-pytools',
         'BubbleGun',
         'statsmodels',
         'resource',

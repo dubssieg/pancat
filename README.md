@@ -7,7 +7,7 @@
 # PANCAT - PANgenome Comparison and Anlaysis Toolkit
 
 > [!WARNING]\
-> py-pancat is currently not maintained with a lot of efforts. Please see rs-pancat-compare for the graph comparison tool, and rs-pancat-paths for various manipulations along the paths. Visualisation tools are currently under maintenance, and are not planned to be re-implemented in Rust.
+> py-pancat is currently not maintained with a lot of efforts. Please see [rs-pancat-compare](https://github.com/dubssieg/rs-pancat-compare) for the graph comparison tool, and [rs-pancat-paths](https://github.com/dubssieg/rs-pancat-paths) for various manipulations along the paths. Visualisation tools are currently under maintenance, and are not planned to be re-implemented in Rust.
 
 Implementations of many functions for performing various actions on GFA-like graphs in a command-line tool, such as extracting or offseting a pangenome graph.
 Is capable of comparing graphs topology between graphs that happen to contain the same set of sequences. Does pangenome graphs visualisation with interactive html files.
