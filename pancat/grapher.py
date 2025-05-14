@@ -38,7 +38,7 @@ def find_interval_on_path(
     # Searching for the start and end node indexes in the reference path
     start_node_index: int = -1
     end_node_index: int = -1
-    current_position: int = graph.paths[path_name]['start_offset']
+    current_position: int = graph.paths[path_name]['start_offset'] or 0
     for i, (node, _) in enumerate(graph.paths[path_name]['path']):
         # We search for the first and last node indexes in path corresponding to the start-stop interval
         if current_position < start:
@@ -53,6 +53,8 @@ def find_interval_on_path(
         start_node_index = 0
     if end_node_index == -1:
         end_node_index = len(graph.paths[path_name]['path'])-1
+
+    print(f"Found start and endpoints〈{graph.paths[path_name]['path'][start_node_index][0]},{graph.paths[path_name]['path'][end_node_index][0]}〉")
 
     return (start_node_index, end_node_index)
 
@@ -81,13 +83,16 @@ def extract_subgraph(gfa_path: str, x: int, y: int, sequence: str, output: str, 
         return (gfa_graph, set(gfa_graph.segments.keys()))
 
     # We use the find_interval_on_path function to get the start and end nodes
-    source, sink = find_interval_on_path(
+    source_index, sink_index = find_interval_on_path(
         graph=gfa_graph,
         path_name=sequence,
         start=x,
         end=y,
     )
 
+    source:str = gfa_graph.paths[sequence]['path'][source_index][0]
+    sink:str = gfa_graph.paths[sequence]['path'][sink_index][0]
+    
     path_dict: dict = dict()
     # We use the intersection of the paths crossing the nodes to get the subgraph
     path_intersect: set[str] = set(gfa_graph.segments[source]['PO'].keys()).intersection(
